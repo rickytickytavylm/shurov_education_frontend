@@ -1180,18 +1180,13 @@ html, body { background: var(--snow); color: var(--ink); }
 }
 @media (max-width: 720px) {
   .site .hero {
-    min-height: auto;
-    display: flex;
-    flex-direction: column;
-    padding: 0 0 28px;
-  }
-  .site .hero-pic {
     display: block;
-    position: relative;
-    width: 100%;
-    height: min(58vw, 360px);
-    min-height: 220px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    min-height: 100svh;
+    padding: 0;
   }
+  .site .hero-pic { display: contents; }
   .site .nav {
     position: absolute;
     padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
@@ -1200,30 +1195,41 @@ html, body { background: var(--snow); color: var(--ink); }
   .site .hero-bg {
     position: absolute;
     inset: 0;
-    object-position: 50% 18%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 8%;
   }
   .site .hero-shade {
     position: absolute;
     inset: 0;
-    height: min(58vw, 360px);
-    min-height: 220px;
-    background: linear-gradient(180deg, rgba(8, 6, 12, 0.28) 0%, transparent 42%, rgba(8, 6, 12, 0.55) 100%);
+    height: auto;
+    min-height: 0;
+    background: linear-gradient(180deg, rgba(8, 6, 12, 0.2) 0%, transparent 24%, rgba(8, 6, 12, 0.42) 58%, rgba(8, 6, 12, 0.7) 100%);
   }
   .site .hero-east,
   .site .hero-west {
-    position: relative;
-    top: auto;
-    right: auto;
-    left: auto;
-    bottom: auto;
+    position: absolute;
     max-width: none;
-    padding: 18px 16px 0;
+    padding: 0;
     text-align: left;
   }
-  .site .hero-east { margin-top: 4px; }
-  .site .hero-east h1 { font-size: clamp(28px, 8vw, 36px); margin-bottom: 16px; }
+  .site .hero-east {
+    top: auto;
+    right: 18px;
+    left: 18px;
+    bottom: 172px;
+    margin: 0;
+  }
+  .site .hero-east h1 { font-size: clamp(28px, 8vw, 36px); margin-bottom: 14px; }
   .site .hero-east .btn { width: 100%; }
-  .site .hero-west p { font-size: 15px; }
+  .site .hero-west {
+    top: auto;
+    left: 18px;
+    right: 18px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  .site .hero-west p { font-size: 14px; margin-bottom: 10px; }
   .site .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 }
 
@@ -1460,37 +1466,43 @@ html, body { background: var(--snow); color: var(--ink); }
     font-size: 12px;
   }
   .site .hero {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
+    display: block;
     min-height: 100svh;
-    padding: calc(76px + env(safe-area-inset-top)) 18px max(22px, env(safe-area-inset-bottom));
+    padding: 0;
   }
   .site .hero-east,
   .site .hero-west,
   .hero-east,
   .hero-west {
-    position: relative;
-    top: auto;
-    right: auto;
-    left: auto;
-    bottom: auto;
+    position: absolute;
     max-width: none;
     text-align: left;
   }
-  .site .hero-east { margin-bottom: 16px; }
+  .site .hero-east {
+    top: auto;
+    right: 18px;
+    left: 18px;
+    bottom: 172px;
+    margin: 0;
+  }
   .site .hero-east h1,
   .hero-east h1 {
     font-size: clamp(26px, 7.4vw, 32px);
     margin-bottom: 14px;
   }
   .site .hero-east .btn { width: 100%; }
+  .site .hero-west {
+    left: 18px;
+    right: 18px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+  }
   .site .hero-west p,
   .hero-west p { font-size: 14px; margin-bottom: 10px; }
   .chips { gap: 6px; }
   .chips a,
   .chips span { min-height: 32px; padding: 4px 10px; font-size: 12px; }
-  body.has-cookie .site .hero { padding-bottom: 150px; }
+  body.has-cookie .site .hero-west { bottom: max(96px, env(safe-area-inset-bottom)); }
+  body.has-cookie .site .hero-east { bottom: 248px; }
 
   .block { padding: 72px 0; }
   .block h2 { font-size: 30px; max-width: none; }
