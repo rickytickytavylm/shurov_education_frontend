@@ -226,21 +226,41 @@ function legalFooterHtml() {
   return `
       <footer class="legal-foot">
         <div class="legal-foot-inner">
-          <p class="legal-kicker">Сайт принадлежит</p>
-          <p class="legal-owner">Индивидуальному предпринимателю Щербаковой Нине Николаевне</p>
-          <p>Юридический адрес организации: 142720, Московская обл., г. Видное, РП Дрожжино, ш. Новое, д. 11, кв. 141</p>
-          <p>ИНН 463238620213 · ОГРН 324508100264433</p>
-          <nav class="legal-links">
-            <a href="https://tvoi-shag.online/docs/oferta" target="_blank" rel="noopener">Публичная оферта</a>
-            <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Политика обработки персональных данных</a>
-            <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Согласие на обработку персональных данных</a>
-            <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Согласие на получение рассылки рекламно-информационных материалов</a>
-          </nav>
-          <p class="legal-edu"><a href="https://tvoi-shag.online/official_info" target="_blank" rel="noopener">Сведения об образовательной организации</a></p>
-          <p>Электронный адрес: <a href="mailto:info@perviyshag1.getcourse.ru">info@perviyshag1.getcourse.ru</a></p>
-          <p>Телефон: <a href="tel:+78005059751">+7 (800) 505-97-51</a><br /><a href="tel:+78005059749">+7 (800) 505-97-49</a></p>
-          <p>Telegram: <a href="https://t.me/Shurovhelp911" target="_blank" rel="noopener">@Shurovhelp911</a></p>
-          <p>По вопросам документации: <a href="tel:+79257572815">8-925-757-28-15</a></p>
+          <div class="legal-brand">
+            <p class="wordmark">школа доктора шурова</p>
+            <p class="legal-tag">Образовательная платформа курса «Любить, не теряя себя»</p>
+          </div>
+          <div class="legal-grid">
+            <section>
+              <h3>Реквизиты</h3>
+              <p class="legal-owner">ИП Щербакова Нина Николаевна</p>
+              <p>ИНН 463238620213</p>
+              <p>ОГРН 324508100264433</p>
+              <p>142720, Московская обл., г. Видное, РП Дрожжино, ш. Новое, д. 11, кв. 141</p>
+            </section>
+            <section>
+              <h3>Документы</h3>
+              <nav class="legal-links">
+                <a href="https://tvoi-shag.online/docs/oferta" target="_blank" rel="noopener">Публичная оферта</a>
+                <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Политика конфиденциальности</a>
+                <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Согласие на обработку данных</a>
+                <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Согласие на информационную рассылку</a>
+                <a href="https://tvoi-shag.online/official_info" target="_blank" rel="noopener">Сведения об образовательной организации</a>
+              </nav>
+            </section>
+            <section>
+              <h3>Контакты</h3>
+              <p><a href="mailto:info@perviyshag1.getcourse.ru">info@perviyshag1.getcourse.ru</a></p>
+              <p><a href="tel:+78005059751">+7 (800) 505-97-51</a></p>
+              <p><a href="tel:+78005059749">+7 (800) 505-97-49</a></p>
+              <p><a href="https://t.me/Shurovhelp911" target="_blank" rel="noopener">Telegram @Shurovhelp911</a></p>
+              <p>Документы: <a href="tel:+79257572815">8-925-757-28-15</a></p>
+            </section>
+          </div>
+          <div class="legal-bottom">
+            <p>© 2026 Школа доктора Шурова</p>
+            <p>Сайт принадлежит индивидуальному предпринимателю Щербаковой Нине Николаевне</p>
+          </div>
         </div>
       </footer>`;
 }
