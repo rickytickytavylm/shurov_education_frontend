@@ -726,6 +726,7 @@ function lessonHtml() {
 
 function lectureHtml(module, lesson) {
   const hw = homework[lesson.id] || { text: "", review: null };
+  const task = lesson.homework || { prompt: "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.", hint: "Любая формулировка подойдёт: в демо разбор придёт сразу." };
   const goals = goalsHtml(lesson.goals || module.goals || []);
   return `
     ${lessonHead(module, lesson, goals)}
@@ -742,9 +743,10 @@ function lectureHtml(module, lesson) {
       <div class="section-label">Практический блок</div>
       <h3>Практическое задание</h3>
       <div class="hw">
-        <p class="ask">${esc(lesson.homework.prompt)}</p>
-        <p class="hint">${esc(lesson.homework.hint)}</p>
-        <textarea id="hwText" placeholder="Сформулируйте ваш ответ на основе конкретного факта из жизни">${esc(hw.text)}</textarea>
+        <p class="ask">${esc(task.prompt)}</p>
+        <p class="hint">${esc(task.hint)}</p>
+        <textarea id="hwText" placeholder="Напишите любой ответ — разбор появится сразу">${esc(hw.text)}</textarea>
+        <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу, и сразу появится демо-разбор.</p>
         <div class="row">
           <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить на разбор"}</button>
           ${nextCta(module, lesson)}
@@ -895,9 +897,13 @@ function kiraHtml() {
     </div>
     <div class="chat-wrap kira-wrap">
       <div class="chat-log" id="kiraLog">${msgs}</div>
-      <form class="chat-in" id="kiraForm">
-        <input name="text" autocomplete="off" placeholder="Вопрос по курсу или ситуация" />
-        <button class="btn" type="submit">отправить</button>
+      <form class="chat-in gpt-in" id="kiraForm">
+        <div class="gpt-box">
+          <textarea name="text" rows="1" autocomplete="off" placeholder="Спросите что угодно"></textarea>
+          <button class="gpt-send" type="submit" aria-label="Отправить">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0-12 5 5m-5-5-5 5M6 20h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </form>
     </div>`;
 }
@@ -1246,18 +1252,33 @@ function bindLesson() {
   const area = document.getElementById("hwText");
   if (!send || !area) return;
   send.onclick = async () => {
-    const text = area.value.trim();
-    if (text.length < 12) {
-      area.focus();
-      return;
-    }
+    const text = area.value.trim() || "Демо-ответ для проверки разбора.";
+    const err = document.getElementById("hwErr");
+    if (err) err.hidden = true;
     send.disabled = true;
     send.textContent = "проверяет…";
-    const review = await reviewHomework(currentId, text);
-    homework[currentId] = { text, review };
-    save(LS.hw, homework);
-    progress[currentId] = true;
-    save(LS.progress, progress);
+    try {
+      const review = await reviewHomework(currentId, text);
+      homework[currentId] = { text: area.value.trim() || text, review };
+      save(LS.hw, homework);
+      progress[currentId] = true;
+      save(LS.progress, progress);
+    } catch (e) {
+      homework[currentId] = {
+        text,
+        review: {
+          summary: "Демо-разбор Киры AI по этому заданию.",
+          points: [
+            "Это учебный ответ: в демо любой текст получает разбор сразу, без сервера.",
+            "В живом запуске здесь будет персональный комментарий по вашему эпизоду.",
+            "Шаг уже можно считать пройденным и идти дальше.",
+          ],
+        },
+      };
+      save(LS.hw, homework);
+      progress[currentId] = true;
+      save(LS.progress, progress);
+    }
     send.disabled = false;
     render();
   };
@@ -1442,26 +1463,46 @@ function bindAtlas() {
 function bindKira() {
   const form = document.getElementById("kiraForm");
   const log = document.getElementById("kiraLog");
+  const box = form && form.querySelector("textarea");
   if (log) log.scrollTop = log.scrollHeight;
   document.querySelectorAll(".kira-pills button").forEach((btn) => {
     btn.onclick = () => askKira(btn.dataset.q);
   });
+  if (!form) return;
+  const grow = () => {
+    if (!box) return;
+    box.style.height = "24px";
+    box.style.height = Math.min(box.scrollHeight, 140) + "px";
+  };
+  if (box) {
+    box.addEventListener("input", grow);
+    box.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form.requestSubmit();
+      }
+    });
+    grow();
+  }
   form.onsubmit = (e) => {
     e.preventDefault();
-    const text = form.text.value.trim();
+    const text = (box ? box.value : form.text.value).trim();
     if (!text) return;
-    form.text.value = "";
+    if (box) box.value = "";
+    else form.text.value = "";
+    grow();
     askKira(text);
   };
 }
 
 async function askKira(text) {
-  kira.push({ id: "k" + Date.now(), name: user.name, me: true, text });
-  kira.push({ id: "think", name: "Кира AI", me: false, text: "Формирую клинический анализ..." });
+  const q = String(text || "").trim() || "Демо-вопрос";
+  kira.push({ id: "k" + Date.now(), name: (user && user.name) || "Вы", me: true, text: q });
+  kira.push({ id: "think", name: "Кира AI", me: false, text: "Формирую ответ..." });
   save(LS.kira, kira);
   render();
-  await new Promise((r) => setTimeout(r, 420));
-  const reply = localKiraReply(text);
+  await new Promise((r) => setTimeout(r, 380));
+  const reply = localKiraReply(q);
   kira = kira.filter((m) => m.id !== "think");
   kira.push({ id: "k" + Date.now() + "a", name: "Кира AI", me: false, text: reply });
   save(LS.kira, kira);
@@ -1490,7 +1531,10 @@ function localKiraReply(text) {
   if (/домашк|задани|практик|провери|разбор/i.test(q)) {
     return here + " Для клинического анализа практического задания сформулируйте конкретный факт: дата/время, контекст ситуации, произнесенные слова или совершенное действие. Нажмите кнопку «отправить на разбор Кире AI» в блоке урока: я проанализирую структуру ответа и помогу отделить факты от автоматического самообвинения.";
   }
-  return here + " Опишите конкретный эпизод из жизни либо сформулируйте вопрос по теоретическим понятиям программы, интерактивным схемам или рабочим листам. Как AI-тьютор я помогу разобрать механику контакта в доказательной рамке школы доктора Шурова.";
+  return (
+    here +
+    " Демо-ответ Киры AI на ваш запрос. В живом запуске здесь будет персональный разбор. По рамке курса: созависимость — это делегированная регуляция, а не «слишком сильная любовь». Смотрите факт (что было сказано и сделано), отделяйте свою ответственность от чужой и не чините состояние другого взрослого сразу. Можете прислать ещё один вопрос или конкретную сцену — учебный разбор придёт на любой запрос."
+  );
 }
 
 function bindTools() {
