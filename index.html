@@ -7,9 +7,9 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Кабинет Шурова" />
-  <title>Школа доктора Шурова. Кабинет курса</title>
-  <meta name="description" content="Веб-приложение курса: бесплатный вводный модуль, четыре вебинара, проверка, анкеты и Кира." />
+  <meta name="apple-mobile-web-app-title" content="Школа Шурова" />
+  <title>Школа доктора Шурова. Образовательная платформа</title>
+  <meta name="description" content="Образовательная платформа курса доктора Шурова: бесплатный вводный практикум, академические модули, интерактивное тестирование, анкеты и AI-тьютор Кира AI." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <script src="config.js?v=3"></script>
@@ -17,37 +17,37 @@
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/pwa-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Play:wght@400;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=27" />
+  <link rel="stylesheet" href="styles.css?v=28" />
 </head>
 <body>
   <div id="app"></div>
   <div class="pwa-layer" id="pwaLayer" hidden>
     <div class="pwa-sheet" role="dialog" aria-modal="true" aria-labelledby="pwaTitle">
       <button class="pwa-x" type="button" id="pwaClose" aria-label="Закрыть">закрыть</button>
-      <p class="kicker">Веб-приложение</p>
-      <h2 id="pwaTitle">Скачать кабинет на телефон</h2>
-      <p class="pwa-lead">Это полноценное веб-приложение. Иконка на домашнем экране, свой экран, прогресс остаётся на устройстве. Ставить нужно из нужного браузера.</p>
+      <p class="kicker">Автономное веб-приложение</p>
+      <h2 id="pwaTitle">Установка платформы на смартфон</h2>
+      <p class="pwa-lead">Кабинет работает как автономное веб-приложение: иконка на домашнем экране, полноэкранный режим, сохранение ответов и непрерывная работа с AI-тьютором Кирой AI.</p>
       <button class="btn" type="button" id="pwaNative" hidden>Установить сейчас</button>
-      <p class="pwa-on-note" id="pwaStandalone" hidden>Приложение уже открыто с домашнего экрана. Можно закрыть эту шторку.</p>
+      <p class="pwa-on-note" id="pwaStandalone" hidden>Платформа уже запущена как приложение с домашнего экрана.</p>
       <div class="pwa-cols">
         <article class="pwa-card" data-os="ios">
-          <p class="pwa-os">iPhone · только Safari</p>
+          <p class="pwa-os">iPhone · строго браузер Safari</p>
           <ol>
-            <li>Откройте этот адрес в <b>Safari</b>. Не Chrome, не Telegram, не Instagram.</li>
-            <li>Нажмите <b>Поделиться</b> внизу экрана: квадрат со стрелкой вверх.</li>
-            <li>Пролистайте и нажмите <b>На экран «Домой»</b>.</li>
-            <li>Нажмите <b>Добавить</b>.</li>
-            <li>Открывайте курс с иконки, как обычное приложение.</li>
+            <li>Откройте страницу в <b>Safari</b> (не Chrome, не внутри Telegram или других приложений).</li>
+            <li>Нажмите кнопку <b>Поделиться</b> в нижней панели: квадрат со стрелкой вверх.</li>
+            <li>Пролистайте меню и выберите <b>На экран «Домой»</b>.</li>
+            <li>Подтвердите добавление кнопкой <b>Добавить</b> вверху справа.</li>
+            <li>Запускайте программу напрямую с домашнего экрана.</li>
           </ol>
         </article>
         <article class="pwa-card" data-os="android">
-          <p class="pwa-os">Android · только Chrome</p>
+          <p class="pwa-os">Android · строго браузер Chrome</p>
           <ol>
-            <li>Откройте этот адрес в <b>Chrome</b>. Не Safari, не браузер внутри Telegram или VK.</li>
-            <li>Нажмите <b>три точки</b> справа вверху.</li>
-            <li>Нажмите <b>Установить приложение</b> или <b>Добавить на главный экран</b>.</li>
-            <li>Подтвердите <b>Установить</b>.</li>
-            <li>Открывайте курс с иконки на экране.</li>
+            <li>Откройте страницу в <b>Google Chrome</b> (не во встроенном браузере соцсетей).</li>
+            <li>Нажмите меню <b>три точки</b> в правом верхнем углу экрана.</li>
+            <li>Выберите пункт <b>Установить приложение</b> или <b>Добавить на главный экран</b>.</li>
+            <li>Подтвердите действие кнопкой <b>Установить</b>.</li>
+            <li>Иконка программы появится среди ваших приложений на смартфоне.</li>
           </ol>
         </article>
       </div>
@@ -57,7 +57,7 @@
     <p>Мы используем cookie-файлы и сервис веб-аналитики Яндекс.Метрика для аналитики посещаемости. Это нужно для лучшей работы сайта. Продолжая пользоваться сайтом, вы соглашаетесь с этим. <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Политика обработки персональных данных</a></p>
     <button type="button" id="cookieOk">Ok</button>
   </div>
-  <script src="course.js?v=8"></script>
-  <script src="app.js?v=24"></script>
+  <script src="course.js?v=9"></script>
+  <script src="app.js?v=25"></script>
 </body>
 </html>
