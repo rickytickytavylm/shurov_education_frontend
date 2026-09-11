@@ -256,7 +256,23 @@ function go(path) {
   else route();
 }
 
-const HOME_SECTIONS = new Set(["top", "how", "free", "program", "doctor"]);
+const HOME_SECTIONS = new Set(["top", "how", "app-install", "free", "program", "doctor"]);
+
+function isStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function deviceKind() {
+  const ua = navigator.userAgent || "";
+  const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  return { ios, android, standalone: isStandalone() };
+}
+
+function pwaOpenBtn(label, cls) {
+  if (isStandalone()) return `<span class="pwa-badge">открыто как приложение</span>`;
+  return `<button class="${cls || "btn"}" type="button" data-pwa-open>${label}</button>`;
+}
 
 function route() {
   const { path, id } = parseHash();
@@ -388,11 +404,11 @@ function startHtml() {
           ${heroCta}
         </div>
         <div class="hero-west">
-          <p>Сначала бесплатный вводный модуль. Потом четыре вебинара, конспект, проверка, анкеты и Кира. Следующий модуль открывается после предыдущего.</p>
+          <p>Это веб-приложение курса. Сначала бесплатный вводный модуль. Потом четыре вебинара, конспект, проверка, анкеты и Кира. Следующий модуль открывается после предыдущего.</p>
           <div class="chips">
+            <a href="#app-install">Веб-приложение</a>
             <a href="#free">Бесплатный модуль</a>
             <a href="#program">Программа</a>
-            <a href="#doctor">Автор</a>
             <span>4 вебинара</span>
             <span>Кира</span>
           </div>
@@ -401,14 +417,31 @@ function startHtml() {
 
       <section class="strip" id="how">
         <div class="inner">
+          <p><b>Веб-приложение</b><span>Иконка на телефоне, Safari и Chrome</span></p>
           <p><b>Бесплатный вход</b><span>Рамка, один день, анкета запроса</span></p>
-          <p><b>4 вебинара</b><span>Конспект, домашка, тест после модуля</span></p>
           <p><b>Кира</b><span>Разбор ответов и тьютор по курсу</span></p>
         </div>
       </section>
 
+      <section class="pwa-band" id="app-install">
+        <div class="inner">
+          <div>
+            <p class="kicker">Веб-приложение</p>
+            <h2>Кабинет ставится на телефон</h2>
+            <p>Это не вкладка в закладках. Это веб-приложение: своя иконка, полный экран, прогресс на устройстве. На iPhone ставьте только из Safari. На Android только из Chrome.</p>
+          </div>
+          <div class="pwa-band-action">
+            ${pwaOpenBtn("Скачать на телефон", "btn")}
+            <p>Откроется короткая инструкция для вашего телефона.</p>
+          </div>
+        </div>
+      </section>
+
       <section class="free-mod" id="free">
-        <img class="free-mod-bg" src="${asset("assets/free-module.webp")}?v=2" alt="" />
+        <picture>
+          <source media="(max-width: 720px)" srcset="${asset("assets/free-module-mobile.webp")}?v=1" type="image/webp" />
+          <img class="free-mod-bg" src="${asset("assets/free-module.webp")}?v=2" alt="" />
+        </picture>
         <div class="free-mod-shade"></div>
         <div class="free-mod-copy">
           <p class="kicker">Бесплатный модуль · около 40 минут</p>
@@ -458,7 +491,7 @@ function startHtml() {
           <p class="kicker">Вход</p>
           <h2>Сначала бесплатный<br />модуль</h2>
           <div class="closing-action">
-            <p>Короткая анкета открывает вводный модуль без оплаты. Четыре вебинара откроются после оплаты и после сдачи предыдущих шагов.</p>
+            <p>Короткая анкета открывает вводный модуль без оплаты. Кабинет можно поставить на телефон как веб-приложение. Четыре вебинара откроются после оплаты и после сдачи предыдущих шагов.</p>
             <button class="btn light" type="button" id="closingStart">Пройти бесплатный модуль <i>→</i></button>
           </div>
         </div>
@@ -605,6 +638,7 @@ function shellHtml(inner) {
           <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">Как это устроено</a>
           <a href="#/tools" class="${view === "tools" ? "on" : ""}">Инструменты</a>
         </nav>
+        ${isStandalone() ? `<span class="pwa-badge light">приложение</span>` : `<button class="text-link light" type="button" data-pwa-open>на телефон</button>`}
         <button class="text-link light" type="button" id="logout">выйти</button>
       </header>
       ${view === "lesson" ? `<nav class="lesson-rail" aria-label="Модули">${rail}</nav><nav class="step-rail" aria-label="Шаги модуля">${steps}</nav>` : ""}
@@ -617,6 +651,11 @@ function shellHtml(inner) {
             <div class="bar"><i style="width:${p.pct}%"></i></div>
           </div>
           ${mods}
+          <div class="pwa-side">
+            <b>Веб-приложение</b>
+            <span>${isStandalone() ? "Кабинет открыт с домашнего экрана." : "Поставьте кабинет на телефон. iPhone: Safari. Android: Chrome."}</span>
+            ${pwaOpenBtn("Скачать", "btn")}
+          </div>
           <div class="studio">
             <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира</a>
             <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">Как это устроено</a>
@@ -1650,6 +1689,70 @@ function syncCookieClass() {
   document.body.classList.toggle("has-cookie", Boolean(bar && !bar.hidden));
 }
 
+function openPwaSheet() {
+  const layer = document.getElementById("pwaLayer");
+  if (!layer) return;
+  const kind = deviceKind();
+  layer.hidden = false;
+  document.body.classList.add("pwa-open");
+  layer.querySelectorAll(".pwa-card").forEach((card) => {
+    const os = card.getAttribute("data-os");
+    card.classList.toggle("is-now", (os === "ios" && kind.ios) || (os === "android" && kind.android));
+  });
+  const stand = document.getElementById("pwaStandalone");
+  if (stand) stand.hidden = !kind.standalone;
+  const native = document.getElementById("pwaNative");
+  if (native) native.hidden = !window.SE_DEFERRED_INSTALL;
+}
+
+function closePwaSheet() {
+  const layer = document.getElementById("pwaLayer");
+  if (layer) layer.hidden = true;
+  document.body.classList.remove("pwa-open");
+}
+
+function bindPwa() {
+  const kind = deviceKind();
+  document.body.classList.toggle("is-standalone", kind.standalone);
+  document.body.classList.toggle("is-ios", kind.ios);
+  document.body.classList.toggle("is-android", kind.android);
+
+  document.addEventListener("click", (e) => {
+    const open = e.target.closest("[data-pwa-open]");
+    if (open) {
+      e.preventDefault();
+      openPwaSheet();
+    }
+    if (e.target.id === "pwaClose" || e.target.id === "pwaLayer") closePwaSheet();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePwaSheet();
+  });
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    window.SE_DEFERRED_INSTALL = e;
+    const native = document.getElementById("pwaNative");
+    if (native) native.hidden = false;
+  });
+  const native = document.getElementById("pwaNative");
+  if (native) {
+    native.onclick = async () => {
+      const ev = window.SE_DEFERRED_INSTALL;
+      if (!ev) return;
+      ev.prompt();
+      await ev.userChoice;
+      window.SE_DEFERRED_INSTALL = null;
+      native.hidden = true;
+    };
+  }
+
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    const swUrl = new URL("sw.js", window.EDU_BASE || location.href);
+    navigator.serviceWorker.register(swUrl.href).catch(() => {});
+  }
+}
+
 function bindCookie() {
   const bar = document.getElementById("cookieBar");
   const ok = document.getElementById("cookieOk");
@@ -1672,7 +1775,9 @@ if (course && $app) {
   window.addEventListener("hashchange", route);
   route();
   bindCookie();
+  bindPwa();
 } else if ($app) {
   $app.innerHTML = `<div class="flow"><div class="flow-main"><p class="eye">Кабинет</p><h1>Файлы курса не загрузились</h1><p class="lead">Обновите страницу с главной ссылки сайта. Демо работает без сервера, в браузере.</p></div></div>`;
   bindCookie();
+  bindPwa();
 }

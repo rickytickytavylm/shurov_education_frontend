@@ -1914,13 +1914,21 @@ html, body { background: var(--snow); color: var(--ink); }
     background: #f4efe8;
     color: var(--ink);
   }
-  .free-mod-bg {
+  .free-mod picture {
+    display: block;
     position: relative;
     width: 100%;
-    height: min(48vw, 280px);
-    min-height: 168px;
+    height: min(78vw, 460px);
+    min-height: 260px;
+    overflow: hidden;
+  }
+  .free-mod-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    object-position: 50% 40%;
+    object-position: center 28%;
   }
   .free-mod-shade { display: none; }
   .free-mod-copy {
@@ -2013,4 +2021,145 @@ html, body { background: var(--snow); color: var(--ink); }
   .lesson-head h2 { font-size: 26px; }
   .scale-n { height: 30px; font-size: 10px; }
   .app-dock a { font-size: 9px; letter-spacing: 0.04em; }
+}
+
+.free-mod picture { display: contents; }
+
+.pwa-band {
+  background: #17151b;
+  color: #fff;
+  padding: 72px 0;
+}
+.pwa-band .inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 48px;
+  align-items: end;
+}
+.pwa-band .kicker { color: rgba(255, 255, 255, 0.62); }
+.pwa-band h2 {
+  max-width: 14ch;
+  margin: 8px 0 16px;
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.05;
+  color: #fff;
+}
+.pwa-band p { margin: 0; max-width: 38em; line-height: 1.55; color: rgba(255, 255, 255, 0.78); }
+.pwa-band-action .btn { min-height: 52px; background: #e4dafd; color: var(--violet); }
+.pwa-band-action p { margin-top: 12px; font-size: 13px; color: rgba(255, 255, 255, 0.55); }
+
+.pwa-side {
+  margin: 0 0 18px;
+  padding: 14px 12px;
+  border-radius: 12px;
+  background: #ede9e2;
+}
+.pwa-side b { display: block; margin-bottom: 6px; font-size: 13px; }
+.pwa-side span { display: block; margin-bottom: 12px; font-size: 12px; line-height: 1.4; color: #625d68; }
+.pwa-side .btn { width: 100%; min-height: 42px; }
+.pwa-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #e7e0f7;
+  color: #3d344f;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pwa-badge.light {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.pwa-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(8, 6, 12, 0.55);
+}
+.pwa-layer[hidden] { display: none !important; }
+.pwa-sheet {
+  width: min(920px, 100%);
+  max-height: min(92dvh, 860px);
+  overflow: auto;
+  padding: 22px 22px 28px;
+  border-radius: 18px 18px 12px 12px;
+  background: #f7f4ee;
+  color: var(--ink);
+}
+.pwa-x {
+  float: right;
+  border: 0;
+  background: transparent;
+  color: #625d68;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pwa-sheet .kicker { color: #78699d; }
+.pwa-sheet h2 {
+  max-width: 16ch;
+  margin: 6px 0 12px;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+}
+.pwa-lead { margin: 0 0 18px; max-width: 40em; line-height: 1.55; color: #4a4550; }
+.pwa-on-note { margin: 0 0 16px; color: #3d344f; }
+.pwa-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+.pwa-card {
+  padding: 16px 16px 8px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(23, 21, 27, 0.08);
+}
+.pwa-card.is-now { box-shadow: inset 0 0 0 1.5px #78699d; }
+.pwa-os {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #78699d;
+}
+.pwa-card ol {
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+.pwa-card li {
+  margin: 0 0 10px;
+  line-height: 1.45;
+  font-size: 14px;
+}
+body.pwa-open { overflow: hidden; }
+
+@media (min-width: 721px) {
+  .pwa-layer { align-items: center; padding: 32px; }
+  .pwa-sheet { border-radius: 16px; padding: 32px; }
+}
+
+@media (max-width: 720px) {
+  .pwa-band { padding: 48px 0; }
+  .pwa-band .inner {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    width: calc(100% - 32px);
+  }
+  .pwa-band h2 { max-width: none; }
+  .pwa-band-action .btn { width: 100%; }
+  .pwa-cols { grid-template-columns: 1fr; }
+  .pwa-sheet { padding: 18px 16px 24px; }
+  .pwa-side { display: none; }
 }

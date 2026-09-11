@@ -4,21 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#17151B" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Кабинет Шурова" />
   <title>Школа доктора Шурова. Кабинет курса</title>
-  <meta name="description" content="Кабинет курса: бесплатный вводный модуль, четыре вебинара, проверка, анкеты, разбор схем и Кира." />
+  <meta name="description" content="Веб-приложение курса: бесплатный вводный модуль, четыре вебинара, проверка, анкеты и Кира." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <script src="config.js?v=2"></script>
+  <script src="config.js?v=3"></script>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/pwa-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Play:wght@400;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=26" />
+  <link rel="stylesheet" href="styles.css?v=27" />
 </head>
 <body>
   <div id="app"></div>
+  <div class="pwa-layer" id="pwaLayer" hidden>
+    <div class="pwa-sheet" role="dialog" aria-modal="true" aria-labelledby="pwaTitle">
+      <button class="pwa-x" type="button" id="pwaClose" aria-label="Закрыть">закрыть</button>
+      <p class="kicker">Веб-приложение</p>
+      <h2 id="pwaTitle">Скачать кабинет на телефон</h2>
+      <p class="pwa-lead">Это полноценное веб-приложение. Иконка на домашнем экране, свой экран, прогресс остаётся на устройстве. Ставить нужно из нужного браузера.</p>
+      <button class="btn" type="button" id="pwaNative" hidden>Установить сейчас</button>
+      <p class="pwa-on-note" id="pwaStandalone" hidden>Приложение уже открыто с домашнего экрана. Можно закрыть эту шторку.</p>
+      <div class="pwa-cols">
+        <article class="pwa-card" data-os="ios">
+          <p class="pwa-os">iPhone · только Safari</p>
+          <ol>
+            <li>Откройте этот адрес в <b>Safari</b>. Не Chrome, не Telegram, не Instagram.</li>
+            <li>Нажмите <b>Поделиться</b> внизу экрана: квадрат со стрелкой вверх.</li>
+            <li>Пролистайте и нажмите <b>На экран «Домой»</b>.</li>
+            <li>Нажмите <b>Добавить</b>.</li>
+            <li>Открывайте курс с иконки, как обычное приложение.</li>
+          </ol>
+        </article>
+        <article class="pwa-card" data-os="android">
+          <p class="pwa-os">Android · только Chrome</p>
+          <ol>
+            <li>Откройте этот адрес в <b>Chrome</b>. Не Safari, не браузер внутри Telegram или VK.</li>
+            <li>Нажмите <b>три точки</b> справа вверху.</li>
+            <li>Нажмите <b>Установить приложение</b> или <b>Добавить на главный экран</b>.</li>
+            <li>Подтвердите <b>Установить</b>.</li>
+            <li>Открывайте курс с иконки на экране.</li>
+          </ol>
+        </article>
+      </div>
+    </div>
+  </div>
   <div class="cookie-bar" id="cookieBar" hidden>
     <p>Мы используем cookie-файлы и сервис веб-аналитики Яндекс.Метрика для аналитики посещаемости. Это нужно для лучшей работы сайта. Продолжая пользоваться сайтом, вы соглашаетесь с этим. <a href="https://tvoi-shag.online/docs/policy" target="_blank" rel="noopener">Политика обработки персональных данных</a></p>
     <button type="button" id="cookieOk">Ok</button>
   </div>
   <script src="course.js?v=8"></script>
-  <script src="app.js?v=23"></script>
+  <script src="app.js?v=24"></script>
 </body>
 </html>
