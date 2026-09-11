@@ -364,19 +364,23 @@ h3 {
   overflow: hidden;
 }
 .video .play {
-  width: 64px; height: 64px;
-  border: 1px solid var(--fog);
+  width: 64px;
+  height: 64px;
+  border: 0;
   border-radius: 50%;
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #17151b;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
-.video .play::before {
-  content: "";
-  width: 0; height: 0;
-  border-left: 16px solid var(--fog);
-  border-top: 10px solid transparent;
-  border-bottom: 10px solid transparent;
-  margin-left: 4px;
+.video .play svg {
+  width: 22px;
+  height: 22px;
+  margin-left: 3px;
+  fill: currentColor;
 }
+.video .play::before { content: none; }
 .video .cap {
   position: absolute; left: 20px; bottom: 16px;
   margin: 0;
@@ -1014,7 +1018,7 @@ html, body { background: var(--snow); color: var(--ink); }
   border: 1px solid rgba(255,255,255,.08);
 }
 .video::before { content: ""; position: absolute; inset: 0; background: url('assets/hero-4k.webp') center 42% / cover; opacity: .2; filter: grayscale(1); }
-.video .play { position: relative; z-index: 1; width: 72px; height: 72px; background: rgba(255,255,255,.08); backdrop-filter: blur(12px); }
+.video .play { position: relative; z-index: 1; width: 64px; height: 64px; background: #fff; }
 .video-meta { position: absolute; z-index: 1; left: 22px; bottom: 18px; }
 .video-meta p { margin: 0 0 3px; font-family: var(--serif); font-size: 21px; }
 .video-meta span { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.58); }
@@ -1733,7 +1737,9 @@ html, body { background: var(--snow); color: var(--ink); }
   .section h3 { font-size: 26px; }
   .lecture p { font-size: 16px; }
   .lecture .lec-drop::first-letter { float: none; font-size: inherit; margin: 0; color: inherit; }
-  .video { margin: 24px 0 36px; }
+  .video { margin: 24px 0 36px; border-radius: 16px; }
+  .video .play { width: 56px; height: 56px; }
+  .video .play svg { width: 20px; height: 20px; }
   .video-meta { display: none; }
   .hw { padding: 18px 14px; }
   .row { flex-direction: column; }

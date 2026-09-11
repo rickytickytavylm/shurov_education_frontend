@@ -731,7 +731,7 @@ function lectureHtml(module, lesson) {
   return `
     ${lessonHead(module, lesson, goals)}
     ${module.free ? "" : `<div class="video" role="img" aria-label="Видеоматериал лекции">
-      <div class="play" aria-hidden="true"></div>
+      <div class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.8v10.4L18 12 9 6.8z"/></svg></div>
       <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)}</span></div>
     </div>`}
     <section class="section">
