@@ -20,46 +20,8 @@ const APPLY_STEPS = [
     id: "name",
     kind: "text",
     title: "Как к вам обращаться",
-    hint: "Имя или то, как к вам обращаться в кабинете.",
+    hint: "Достаточно имени. Кабинет откроется сразу, все модули доступны.",
     placeholder: "Имя",
-  },
-  {
-    id: "email",
-    kind: "email",
-    title: "Почта для входа",
-    hint: "На неё потом придёт доступ. Сейчас это только заглушка.",
-    placeholder: "you@email.ru",
-  },
-  {
-    id: "role",
-    kind: "choice",
-    title: "Ради кого вы здесь",
-    options: [
-      { id: "self", label: "Ради себя", note: "Усталость в отношениях, где вы растворяетесь." },
-      { id: "partner", label: "Рядом с партнёром", note: "Его состояние держит ваш день." },
-      { id: "family", label: "Рядом с родным", note: "Родитель, взрослый ребёнок, кто-то из семьи." },
-    ],
-  },
-  {
-    id: "pain",
-    kind: "choice",
-    title: "Что сейчас больнее всего",
-    options: [
-      { id: "dissolve", label: "Растворение", note: "Своей жизни почти не осталось." },
-      { id: "guilt", label: "Вина", note: "Любое «нет» потом невозможно выдержать." },
-      { id: "rescue", label: "Спасательство", note: "Если не я, развалится." },
-      { id: "repeat", label: "Повтор сценария", note: "С новым человеком всё сначала." },
-    ],
-  },
-  {
-    id: "goal",
-    kind: "choice",
-    title: "Что хотите унести с курса",
-    options: [
-      { id: "see", label: "Увидеть сценарий", note: "Назвать, что происходит, своими словами." },
-      { id: "stop", label: "Научиться останавливаться", note: "Не чинить чужое состояние сразу." },
-      { id: "next", label: "Понять следующий шаг", note: "Куда в школе идти после этих четырёх встреч." },
-    ],
   },
 ];
 
@@ -75,7 +37,7 @@ const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
 let user = load(LS.user, null);
 let apply = load(LS.apply, {});
-let paid = Boolean(load(LS.paid, false));
+let paid = Boolean(load(LS.paid, false) || user);
 let progress = load(LS.progress, {});
 let homework = load(LS.hw, {});
 let quizState = load(LS.quiz, {});
@@ -153,27 +115,15 @@ function moduleComplete(mod) {
 }
 
 function canOpenModule(mod) {
-  if (!user) return false;
-  if (!mod.free && !paid) return false;
-  const i = course.modules.findIndex((m) => m.id === mod.id);
-  if (i <= 0) return true;
-  return moduleComplete(course.modules[i - 1]);
+  return Boolean(user && mod);
 }
 
 function canOpenLesson(id) {
-  const { module, lesson } = findLesson(id);
-  if (!module || !canOpenModule(module)) return false;
-  const list = lessonsOf(module);
-  const idx = list.findIndex((l) => l.id === lesson.id);
-  return list.slice(0, idx).every((l) => progress[l.id]);
+  return Boolean(user && id);
 }
 
 function lockReason(id) {
   if (!user) return "need-auth";
-  const { module } = findLesson(id);
-  if (!module.free && !paid) return "need-pay";
-  if (!canOpenModule(module)) return "need-prev-module";
-  if (!canOpenLesson(id)) return "need-prev-lesson";
   return "";
 }
 
@@ -202,7 +152,6 @@ function nextStepId(module, lesson) {
   const mi = course.modules.findIndex((m) => m.id === module.id);
   const next = course.modules[mi + 1];
   if (!next) return "";
-  if (!canOpenModule(next)) return "";
   return lessonsOf(next)[0]?.id || "";
 }
 
@@ -398,9 +347,7 @@ function startHtml() {
       </li>`
     )
     .join("");
-  const heroCta = user
-    ? `<button class="btn light" type="button" id="toCourse">Войти в кабинет</button>`
-    : `<button class="btn light" type="button" id="toFree">Пройти бесплатный модуль</button>`;
+  const heroCta = `<button class="btn light" type="button" id="${user ? "toCourse" : "toFree"}">Войти в кабинет</button>`;
   const navCta = user
     ? `<button class="btn ghost" type="button" id="toCourseNav">в кабинет</button>`
     : `<button class="btn ghost" type="button" id="toLogin">войти</button>`;
@@ -448,20 +395,6 @@ function startHtml() {
         </div>
       </section>
 
-      <section class="pwa-band" id="app-install">
-        <div class="inner">
-          <div>
-            <p class="kicker">Веб-приложение PWA</p>
-            <h2>Установите платформу на смартфон</h2>
-            <p>Кабинет работает как автономное приложение: запуск с домашнего экрана, сохранение личного прогресса, автономный доступ к конспектам и непрерывный диалог с Кирой AI. На iPhone установка выполняется строго через Safari, на Android: строго через Google Chrome.</p>
-          </div>
-          <div class="pwa-band-action">
-            ${pwaOpenBtn("Скачать на телефон", "btn")}
-            <p>Инструкция откроется с учетом вашей операционной системы.</p>
-          </div>
-        </div>
-      </section>
-
       <section class="free-mod" id="free">
         <picture>
           <source media="(max-width: 720px)" srcset="${asset("assets/free-module-mobile.webp")}?v=1" type="image/webp" />
@@ -477,7 +410,7 @@ function startHtml() {
             <li>Как обнаружить системный сценарий в одном конкретном вечере, минуя абстрактную вину</li>
             <li>Контрольное тестирование и глубокая анкета запроса перед четырьмя модулями курса</li>
           </ul>
-          <button class="btn light" type="button" id="toFree">Пройти бесплатный модуль</button>
+          <button class="btn light" type="button" id="${user ? "toCourse" : "toFree"}">Войти в кабинет</button>
         </div>
       </section>
 
@@ -485,7 +418,7 @@ function startHtml() {
         <div class="inner">
           <div class="program-head">
             <div><p class="kicker">Учебный план</p><h2>Вводный модуль и четыре ступени курса</h2></div>
-            <p>Модули открываются последовательно: каждый следующий этап становится доступен после освоения предыдущего материала, контрольного тестирования и практической работы. Вводный практикум доступен бесплатно сразу после регистрации.</p>
+            <p>После входа по имени открываются сразу все материалы: вводный практикум, четыре модуля, тесты, анкеты и Кира AI.</p>
           </div>
           <ol class="mods">${mods}</ol>
         </div>
@@ -511,13 +444,16 @@ function startHtml() {
         </blockquote>
       </section>
 
-      <section class="closing">
-        <div class="closing-board">
-          <p class="kicker">Вход</p>
-          <h2>Сначала бесплатный<br />модуль</h2>
-          <div class="closing-action">
-            <p>Короткая анкета открывает вводный модуль без оплаты. Кабинет можно поставить на телефон как веб-приложение. Четыре вебинара откроются после оплаты и после сдачи предыдущих шагов.</p>
-            <button class="btn light" type="button" id="closingStart">Пройти бесплатный модуль <i>→</i></button>
+      <section class="pwa-band" id="app-install">
+        <div class="inner">
+          <div>
+            <p class="kicker">Веб-приложение PWA</p>
+            <h2>Установите платформу на смартфон</h2>
+            <p>Кабинет работает как автономное приложение: запуск с домашнего экрана, сохранение личного прогресса, автономный доступ к конспектам и непрерывный диалог с Кирой AI. На iPhone установка выполняется строго через Safari, на Android: строго через Google Chrome.</p>
+          </div>
+          <div class="pwa-band-action">
+            ${pwaOpenBtn("Скачать на телефон", "btn")}
+            <p>Инструкция откроется с учетом вашей операционной системы.</p>
           </div>
         </div>
       </section>
@@ -536,10 +472,9 @@ function loginHtml() {
       <div class="flow-main">
         <p class="eye">Личный кабинет</p>
         <h1>Продолжить обучение</h1>
-        <p class="lead">Если вы уже проходили анкету на этом устройстве, почта откроет то же место: бесплатный модуль или следующий незакрытый шаг.</p>
+        <p class="lead">Введите имя, с которым заходили на этом устройстве.</p>
         <form class="stack-form" id="loginForm">
-          <label>почта<input name="email" type="email" required autocomplete="email" placeholder="you@email.ru" value="${esc(user?.email || "")}" /></label>
-          <label>имя<input name="name" type="text" autocomplete="name" placeholder="Как к вам обращаться" value="${esc(user?.name || "")}" /></label>
+          <label>имя<input name="name" type="text" required autocomplete="name" placeholder="Как к вам обращаться" value="${esc(user?.name || "")}" /></label>
           <button class="btn" type="submit">войти</button>
         </form>
         <p class="fine">Нет входа: <a href="#/apply">начните с анкеты</a>. Боевой аккаунт подключим отдельно.</p>
@@ -581,7 +516,7 @@ function applyHtml() {
         <form id="applyForm" class="stack-form">
           ${field}
           <div class="actions">
-            <button class="btn" type="submit" id="applyNext">${n === total ? "в бесплатный модуль" : "дальше"}</button>
+            <button class="btn" type="submit" id="applyNext">${n === total ? "войти в кабинет" : "дальше"}</button>
             ${applyStep > 0 ? `<button class="text-link" type="button" id="applyBack">назад</button>` : `<a class="text-link" href="#/">на стартовую</a>`}
           </div>
         </form>
@@ -1177,26 +1112,24 @@ function bindStart() {
   const login = document.getElementById("toLogin");
   const applyBtn = document.getElementById("toApply");
   const courseNav = document.getElementById("toCourseNav");
-  const closingStart = document.getElementById("closingStart");
   if (login) login.onclick = goLogin;
   if (applyBtn) applyBtn.onclick = () => goApply("");
   document.querySelectorAll("#toCourse").forEach((el) => { el.onclick = goCourse; });
   document.querySelectorAll("#toFree").forEach((el) => { el.onclick = goFree; });
   if (courseNav) courseNav.onclick = goCourse;
-  if (closingStart) closingStart.onclick = goFree;
 }
 
 function bindLogin() {
   document.getElementById("loginForm").onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const email = String(fd.get("email") || "")
-      .trim()
-      .toLowerCase();
-    const name = String(fd.get("name") || "").trim() || "Слушатель";
-    if (!email) return;
-    user = { id: "u-" + email, name, email };
+    const name = String(fd.get("name") || "").trim();
+    if (!name) return;
+    const key = name.toLowerCase();
+    user = { id: "u-" + key, name, email: "" };
     save(LS.user, user);
+    paid = true;
+    save(LS.paid, true);
     await post("/auth/login", user);
     go("/lesson/" + continueLessonId());
   };
@@ -1237,11 +1170,13 @@ function bindApply() {
     apply = { ...applyDraft };
     save(LS.apply, apply);
     user = {
-      id: "u-" + String(apply.email || "guest").toLowerCase(),
+      id: "u-" + String(apply.name || "guest").toLowerCase(),
       name: apply.name || "Слушатель",
-      email: String(apply.email || "").toLowerCase(),
+      email: "",
     };
     save(LS.user, user);
+    paid = true;
+    save(LS.paid, true);
     await post("/apply", { user, apply });
     go("/lesson/m0-l1");
   };
