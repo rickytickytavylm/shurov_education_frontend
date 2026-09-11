@@ -6,6 +6,8 @@ const LS = {
   hw: "se_hw",
   kira: "se_kira",
   tools: "se_tools",
+  quiz: "se_quiz",
+  survey: "se_survey",
 };
 
 const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
@@ -75,6 +77,8 @@ let apply = load(LS.apply, {});
 let paid = Boolean(load(LS.paid, false));
 let progress = load(LS.progress, {});
 let homework = load(LS.hw, {});
+let quizState = load(LS.quiz, {});
+let surveyState = load(LS.survey, {});
 let kira = load(LS.kira, [
   {
     id: "k0",
@@ -105,7 +109,7 @@ let applyDraft = { ...apply };
 let applyStep = firstApplyStep();
 
 function firstLessonId() {
-  return course.modules[0].lessons[0].id;
+  return lessonsOf(course.modules[0])[0].id;
 }
 
 function firstApplyStep() {
@@ -117,14 +121,19 @@ function firstApplyStep() {
 
 function findLesson(id) {
   for (const m of course.modules) {
-    const lesson = m.lessons.find((l) => l.id === id);
+    const lesson = lessonsOf(m).find((l) => l.id === id);
     if (lesson) return { module: m, lesson };
   }
-  return { module: course.modules[0], lesson: course.modules[0].lessons[0] };
+  const first = course.modules[0];
+  return { module: first, lesson: lessonsOf(first)[0] };
+}
+
+function lessonsOf(mod) {
+  return (mod.lessons || []).filter((l) => l && l.id);
 }
 
 function allLessons() {
-  return course.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleId: m.id })));
+  return course.modules.flatMap((m) => lessonsOf(m).map((l) => ({ ...l, moduleId: m.id })));
 }
 
 function progressPct() {
@@ -135,6 +144,69 @@ function progressPct() {
 
 function applyDone() {
   return APPLY_STEPS.every((s) => Boolean(apply[s.id]));
+}
+
+function moduleComplete(mod) {
+  const list = lessonsOf(mod);
+  return list.length > 0 && list.every((l) => Boolean(progress[l.id]));
+}
+
+function canOpenModule(mod) {
+  if (!user) return false;
+  if (!mod.free && !paid) return false;
+  const i = course.modules.findIndex((m) => m.id === mod.id);
+  if (i <= 0) return true;
+  return moduleComplete(course.modules[i - 1]);
+}
+
+function canOpenLesson(id) {
+  const { module, lesson } = findLesson(id);
+  if (!module || !canOpenModule(module)) return false;
+  const list = lessonsOf(module);
+  const idx = list.findIndex((l) => l.id === lesson.id);
+  return list.slice(0, idx).every((l) => progress[l.id]);
+}
+
+function lockReason(id) {
+  if (!user) return "need-auth";
+  const { module } = findLesson(id);
+  if (!module.free && !paid) return "need-pay";
+  if (!canOpenModule(module)) return "need-prev-module";
+  if (!canOpenLesson(id)) return "need-prev-lesson";
+  return "";
+}
+
+function continueLessonId() {
+  for (const m of course.modules) {
+    if (!canOpenModule(m)) continue;
+    for (const l of lessonsOf(m)) {
+      if (!progress[l.id]) return l.id;
+    }
+  }
+  return firstLessonId();
+}
+
+function stepLabel(module, lesson) {
+  const list = lessonsOf(module);
+  const n = list.findIndex((l) => l.id === lesson.id) + 1;
+  const total = list.length;
+  if (module.free) return `Вводный модуль · шаг ${n} из ${total}`;
+  return `Вебинар ${module.n} · шаг ${n} из ${total}`;
+}
+
+function nextStepId(module, lesson) {
+  const list = lessonsOf(module);
+  const i = list.findIndex((l) => l.id === lesson.id);
+  if (i >= 0 && i < list.length - 1) return list[i + 1].id;
+  const mi = course.modules.findIndex((m) => m.id === module.id);
+  const next = course.modules[mi + 1];
+  if (!next) return "";
+  if (!canOpenModule(next)) return "";
+  return lessonsOf(next)[0]?.id || "";
+}
+
+function firstIncompleteIn(mod) {
+  return lessonsOf(mod).find((l) => !progress[l.id])?.id || lessonsOf(mod)[0]?.id || firstLessonId();
 }
 
 function esc(s) {
@@ -183,7 +255,7 @@ function go(path) {
   else route();
 }
 
-const HOME_SECTIONS = new Set(["top", "how", "program", "doctor"]);
+const HOME_SECTIONS = new Set(["top", "how", "free", "program", "doctor"]);
 
 function route() {
   const { path, id } = parseHash();
@@ -200,17 +272,21 @@ function route() {
   }
   if (path === "lesson" && id) {
     currentId = id;
-    view = paid && user ? "lesson" : nextPublic();
+    view = user ? "lesson" : nextPublic();
   } else if (path === "kira" || path === "atlas" || path === "tools") {
-    view = paid && user ? path : nextPublic();
+    view = user ? path : nextPublic();
   } else if (path === "login") {
-    view = paid && user ? "lesson" : "login";
+    view = user ? "lesson" : "login";
+    if (user) currentId = continueLessonId();
   } else if (path === "apply") {
-    view = paid && user ? "lesson" : "apply";
-    applyStep = firstApplyStep();
+    view = user ? "lesson" : "apply";
+    if (user) currentId = continueLessonId();
+    else applyStep = firstApplyStep();
   } else if (path === "pay") {
-    if (paid && user) view = "lesson";
-    else view = applyDone() || user ? "pay" : "apply";
+    if (paid && user) {
+      view = "lesson";
+      currentId = continueLessonId();
+    } else view = applyDone() || user ? "pay" : "apply";
   } else {
     view = "start";
   }
@@ -221,8 +297,7 @@ function route() {
 }
 
 function nextPublic() {
-  if (applyDone()) return "pay";
-  if (user) return "apply";
+  if (apply.name || apply.email) return "apply";
   return "start";
 }
 
@@ -274,20 +349,20 @@ function render() {
 function startHtml() {
   const mods = course.modules
     .map(
-      (m) => `<li class="module-card">
-        <span class="module-index">0${m.n}</span>
+      (m) => `<li class="module-card${m.free ? " is-free" : ""}">
+        <span class="module-index">${String(m.n).padStart(2, "0")}</span>
         <div>
           <h3>${esc(m.title)}</h3>
           <p>${esc(m.blurb)}</p>
         </div>
-        <span class="module-time">вебинар ${m.n}</span>
+        <span class="module-time">${m.free ? "бесплатно" : "вебинар " + m.n}</span>
       </li>`
     )
     .join("");
-  const heroCta = paid && user
+  const heroCta = user
     ? `<button class="btn light" type="button" id="toCourse">Войти в кабинет</button>`
-    : `<button class="btn light" type="button" id="toApply">Пройти анкету</button>`;
-  const navCta = paid && user
+    : `<button class="btn light" type="button" id="toFree">Пройти бесплатный модуль</button>`;
+  const navCta = user
     ? `<button class="btn ghost" type="button" id="toCourseNav">в кабинет</button>`
     : `<button class="btn ghost" type="button" id="toLogin">войти</button>`;
   return `
@@ -301,7 +376,7 @@ function startHtml() {
         <header class="nav">
           <a class="brand" href="#/">школа доктора шурова</a>
           <nav>
-            <a href="#how">как устроено</a>
+            <a href="#free">модуль</a>
             <a href="#program">программа</a>
             <a href="#doctor">автор</a>
           </nav>
@@ -312,9 +387,9 @@ function startHtml() {
           ${heroCta}
         </div>
         <div class="hero-west">
-          <p>Кабинет курса: четыре вебинара, конспект, разбор схем отношений, рабочие листы и Кира.</p>
+          <p>Сначала бесплатный вводный модуль. Потом четыре вебинара, конспект, проверка, анкеты и Кира. Следующий модуль открывается после предыдущего.</p>
           <div class="chips">
-            <a href="#how">Как устроено</a>
+            <a href="#free">Бесплатный модуль</a>
             <a href="#program">Программа</a>
             <a href="#doctor">Автор</a>
             <span>4 вебинара</span>
@@ -325,17 +400,33 @@ function startHtml() {
 
       <section class="strip" id="how">
         <div class="inner">
-          <p><b>4 вебинара</b><span>Академический конспект и практика</span></p>
-          <p><b>Разбор и инструменты</b><span>Как устроены отношения, рабочие листы, словарь</span></p>
-          <p><b>Кира</b><span>Тьютор по курсу и созависимости</span></p>
+          <p><b>Бесплатный вход</b><span>Рамка, один день, анкета запроса</span></p>
+          <p><b>4 вебинара</b><span>Конспект, домашка, тест после модуля</span></p>
+          <p><b>Кира</b><span>Разбор ответов и тьютор по курсу</span></p>
+        </div>
+      </section>
+
+      <section class="free-mod" id="free">
+        <img class="free-mod-bg" src="/assets/free-module.webp" alt="" />
+        <div class="free-mod-shade"></div>
+        <div class="free-mod-copy">
+          <p class="kicker">Бесплатный модуль · около 40 минут</p>
+          <h2>Как устроена созависимость</h2>
+          <p class="free-mod-lead">Три шага до платных вебинаров: рамка курса, один обычный день вашей жизни и анкета запроса. Как в практикуме: сначала понятная теория, потом задание, потом проверка.</p>
+          <ul class="free-mod-list">
+            <li>Что курс называет созависимостью и чем это не диагноз</li>
+            <li>Как увидеть схему в вечере, а не в абстракции «я всегда такая»</li>
+            <li>Тест и анкета, чтобы войти в четыре встречи уже с запросом</li>
+          </ul>
+          <button class="btn light" type="button" id="toFree">Пройти бесплатный модуль</button>
         </div>
       </section>
 
       <section class="block violet" id="program">
         <div class="inner">
           <div class="program-head">
-            <div><p class="kicker">Программа</p><h2>Четыре встречи курса</h2></div>
-            <p>У каждой встречи одно поле: видео, академический конспект и практика. Рядом разбор схем, инструменты и Кира.</p>
+            <div><p class="kicker">Программа</p><h2>Вводный модуль и четыре встречи</h2></div>
+            <p>Новый модуль закрыт, пока не сданы предыдущие шаги: урок, задание, тест и анкета, если она есть. Полный доступ к вебинарам открывается после оплаты. Вводный модуль можно пройти без неё.</p>
           </div>
           <ol class="mods">${mods}</ol>
         </div>
@@ -364,10 +455,10 @@ function startHtml() {
       <section class="closing">
         <div class="closing-board">
           <p class="kicker">Вход</p>
-          <h2>Сначала анкета,<br />потом кабинет</h2>
+          <h2>Сначала бесплатный<br />модуль</h2>
           <div class="closing-action">
-            <p>Пять коротких вопросов настроят маршрут внутри курса. Если вы уже внутри, войдите по почте.</p>
-            <button class="btn light" type="button" id="closingStart">Пройти анкету <i>→</i></button>
+            <p>Короткая анкета открывает вводный модуль без оплаты. Четыре вебинара откроются после оплаты и после сдачи предыдущих шагов.</p>
+            <button class="btn light" type="button" id="closingStart">Пройти бесплатный модуль <i>→</i></button>
           </div>
         </div>
       </section>
@@ -386,7 +477,7 @@ function loginHtml() {
       <div class="flow-main">
         <p class="eye">Личный кабинет</p>
         <h1>Продолжить обучение</h1>
-        <p class="lead">Если вы уже проходили анкету или оплату на этом устройстве, почта откроет то же место.</p>
+        <p class="lead">Если вы уже проходили анкету на этом устройстве, почта откроет то же место: бесплатный модуль или следующий незакрытый шаг.</p>
         <form class="stack-form" id="loginForm">
           <label>почта<input name="email" type="email" required autocomplete="email" placeholder="you@email.ru" value="${esc(user?.email || "")}" /></label>
           <label>имя<input name="name" type="text" autocomplete="name" placeholder="Как к вам обращаться" value="${esc(user?.name || "")}" /></label>
@@ -432,7 +523,7 @@ function applyHtml() {
           ${field}
           <div class="actions">
             ${applyStep > 0 ? `<button class="btn ghost" type="button" id="applyBack">назад</button>` : `<a class="btn ghost" href="#/">на стартовую</a>`}
-            <button class="btn" type="submit" id="applyNext">${n === total ? "к оплате" : "дальше"}</button>
+            <button class="btn" type="submit" id="applyNext">${n === total ? "в бесплатный модуль" : "дальше"}</button>
           </div>
         </form>
       </div>
@@ -449,14 +540,15 @@ function payHtml() {
         <a class="text-link" href="#/apply">к анкете</a>
       </header>
       <div class="flow-main">
-        <p class="eye">Последний шаг</p>
-        <h1>Открыть полный доступ</h1>
-        <p class="lead">Четыре вебинара, лекции и практика. Касса ещё не подключена. Кнопка открывает кабинет, как после успешной оплаты.</p>
+        <p class="eye">Полный доступ</p>
+        <h1>Открыть четыре вебинара</h1>
+        <p class="lead">Вводный модуль уже можно проходить без оплаты. Касса ещё не подключена. Кнопка открывает вебинары, как после успешной оплаты. Следующий модуль всё равно откроется только после предыдущего.</p>
         <ul class="pay-points">
           <li>${esc(name)}</li>
           <li>${esc(email)}</li>
         </ul>
         <button class="btn" type="button" id="payStub">оплатить</button>
+        ${user ? `<p class="fine"><a href="#/lesson/${esc(continueLessonId())}">вернуться в кабинет</a></p>` : ""}
         <p class="fine">Заглушка. Боевой платёж встанет сюда отдельно.</p>
       </div>
     </div>`;
@@ -466,15 +558,17 @@ function shellHtml(inner) {
   const p = progressPct();
   const mods = course.modules
     .map((m) => {
-      const items = m.lessons
+      const openMod = canOpenModule(m);
+      const items = lessonsOf(m)
         .map((l) => {
           const on = view === "lesson" && currentId === l.id ? " on" : "";
           const done = progress[l.id] ? " done" : "";
-          return `<a class="${on}" href="#/lesson/${l.id}" data-id="${l.id}"><span class="dot${done}"></span><span>${esc(l.title)}</span></a>`;
+          const lock = canOpenLesson(l.id) ? "" : " is-lock";
+          return `<a class="${on}${lock}" href="#/lesson/${l.id}" data-id="${l.id}"><span class="dot${done}"></span><span>${esc(l.title)}</span></a>`;
         })
         .join("");
-      return `<div class="nav-mod">
-        <div class="n">вебинар ${m.n}</div>
+      return `<div class="nav-mod${openMod ? "" : " is-lock"}${moduleComplete(m) ? " is-done" : ""}${m.free ? " is-free" : ""}">
+        <div class="n">${m.free ? "вводный · бесплатно" : "вебинар " + m.n}</div>
         <div class="t">${esc(m.title)}</div>
         <div class="lessons">${items}</div>
       </div>`;
@@ -483,10 +577,11 @@ function shellHtml(inner) {
   const doc = course.doctor || {};
   const rail = course.modules
     .map((m) => {
-      const lesson = m.lessons[0];
-      const on = view === "lesson" && currentId === lesson.id ? " on" : "";
-      const done = progress[lesson.id] ? " is-done" : "";
-      return `<a class="${on}${done}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="Вебинар ${m.n}. ${esc(m.title)}"><em>0${m.n}</em></a>`;
+      const lesson = lessonsOf(m)[0];
+      const on = view === "lesson" && findLesson(currentId).module.id === m.id ? " on" : "";
+      const done = moduleComplete(m) ? " is-done" : "";
+      const lock = canOpenModule(m) ? "" : " is-lock";
+      return `<a class="${on}${done}${lock}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный модуль" : "Вебинар " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
     })
     .join("");
   return `
@@ -533,34 +628,107 @@ function shellHtml(inner) {
     </div>`;
 }
 
-function lessonHtml() {
-  const { module, lesson } = findLesson(currentId);
-  const hw = homework[lesson.id] || { text: "", review: null };
-  const lecture = lectureBlocks(lesson.lecture);
-  const review = hw.review
-    ? `<div class="review">
-        <div class="tag">разбор</div>
-        <p>${esc(hw.review.summary)}</p>
-        <ul>${(hw.review.points || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
-      </div>`
-    : "";
+function lessonHead(module, lesson, extra = "") {
   return `
     <div class="lesson-head">
       <div>
-        <p class="crumb">Программа · вебинар ${module.n} из 4</p>
+        <p class="crumb">${esc(stepLabel(module, lesson))}</p>
         <h2>${esc(lesson.title)}</h2>
         <p class="lede">${esc(module.blurb)}</p>
+        ${extra}
       </div>
-      <span class="lesson-number">0${module.n}</span>
-    </div>
-    <div class="video" role="img" aria-label="Поле под видео">
+      <span class="lesson-number">${String(module.n).padStart(2, "0")}</span>
+    </div>`;
+}
+
+function goalsHtml(goals) {
+  if (!goals || !goals.length) return "";
+  return `<ul class="goals">${goals.map((g) => `<li>${esc(g)}</li>`).join("")}</ul>`;
+}
+
+function reviewCard(review, tag) {
+  if (!review) return "";
+  return `<div class="review">
+    <div class="tag">${esc(tag || "разбор Киры")}</div>
+    <p>${esc(review.summary)}</p>
+    <ul>${(review.points || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+  </div>`;
+}
+
+function nextCta(module, lesson) {
+  if (!progress[lesson.id]) return "";
+  const next = nextStepId(module, lesson);
+  if (next) return `<a class="btn" href="#/lesson/${esc(next)}" id="goNext">следующий шаг</a>`;
+  const mi = course.modules.findIndex((m) => m.id === module.id);
+  const after = course.modules[mi + 1];
+  if (after && !after.free && !paid) {
+    return `<a class="btn" href="#/pay">открыть четыре вебинара</a>`;
+  }
+  if (after && !canOpenModule(after)) {
+    return `<p class="hint">Следующий модуль откроется, когда будут сданы все шаги этого.</p>`;
+  }
+  return `<p class="hint">Курс пройден до текущей точки. Можно вернуться к любому сданному шагу.</p>`;
+}
+
+function lockedHtml(reason, module, lesson) {
+  const prev = course.modules[course.modules.findIndex((m) => m.id === module.id) - 1];
+  let title = "Шаг пока закрыт";
+  let text = "Сначала сдайте предыдущий шаг: урок, задание, тест или анкету.";
+  let action = "";
+  if (reason === "need-pay") {
+    title = "Вебинар откроется после оплаты";
+    text = "Вводный модуль уже доступен бесплатно. Четыре встречи курса открываются после оплаты и после сдачи предыдущего модуля.";
+    action = `<a class="btn" href="#/pay">открыть полный доступ</a>
+      <a class="btn ghost" href="#/lesson/${esc(continueLessonId())}">вернуться к доступному шагу</a>`;
+  } else if (reason === "need-prev-module") {
+    title = "Модуль ещё закрыт";
+    text = prev
+      ? `Сначала сдайте «${prev.title}»: все уроки, домашку, тест и анкету, если она есть.`
+      : "Сначала сдайте предыдущий модуль.";
+    const jump = prev ? firstIncompleteIn(prev) : continueLessonId();
+    action = `<a class="btn" href="#/lesson/${esc(jump)}">к незакрытому шагу</a>`;
+  } else if (reason === "need-prev-lesson") {
+    title = "Сначала предыдущий шаг";
+    const list = lessonsOf(module);
+    const prevLesson = [...list].reverse().find((l, i, arr) => {
+      const idx = list.findIndex((x) => x.id === lesson.id);
+      return list.indexOf(l) < idx && !progress[l.id];
+    }) || list.find((l) => !progress[l.id]);
+    text = prevLesson ? `Сначала сдайте «${prevLesson.title}». Следующий шаг открывается только после предыдущего.` : text;
+    action = `<a class="btn" href="#/lesson/${esc(prevLesson?.id || continueLessonId())}">открыть предыдущий шаг</a>`;
+  }
+  return `
+    ${lessonHead(module, lesson)}
+    <section class="section lock-card">
+      <div class="section-label">Доступ</div>
+      <h3>${esc(title)}</h3>
+      <p class="lede">${esc(text)}</p>
+      <div class="row">${action}</div>
+    </section>`;
+}
+
+function lessonHtml() {
+  const { module, lesson } = findLesson(currentId);
+  const lock = lockReason(currentId);
+  if (lock) return lockedHtml(lock, module, lesson);
+  if (lesson.type === "quiz") return quizHtml(module, lesson);
+  if (lesson.type === "survey") return surveyHtml(module, lesson);
+  return lectureHtml(module, lesson);
+}
+
+function lectureHtml(module, lesson) {
+  const hw = homework[lesson.id] || { text: "", review: null };
+  const goals = goalsHtml(lesson.goals || module.goals);
+  return `
+    ${lessonHead(module, lesson, goals)}
+    ${module.free ? "" : `<div class="video" role="img" aria-label="Поле под видео">
       <div class="play" aria-hidden="true"></div>
-      <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)} · 42 мин</span></div>
-    </div>
+      <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)}</span></div>
+    </div>`}
     <section class="section">
-      <div class="section-label">Академический конспект</div>
-      <h3>Рамка встречи</h3>
-      <div class="lecture">${lecture}</div>
+      <div class="section-label">${module.free ? "Урок практикума" : "Академический конспект"}</div>
+      <h3>${module.free ? "Рамка и материал" : "Рамка встречи"}</h3>
+      <div class="lecture">${lectureBlocks(lesson.lecture)}</div>
     </section>
     <section class="section">
       <div class="section-label">Практика</div>
@@ -573,9 +741,118 @@ function lessonHtml() {
           <button class="btn" type="button" id="hwSend">отправить на проверку</button>
           <button class="btn ghost" type="button" id="markDone">${progress[lesson.id] ? "пройдено" : "отметить пройденным"}</button>
           <a class="btn ghost" href="#/kira">спросить Киру</a>
+          ${nextCta(module, lesson)}
         </div>
-        ${review}
+        ${reviewCard(hw.review, "разбор домашки")}
       </div>
+    </section>`;
+}
+
+function quizHtml(module, lesson) {
+  const items = lesson.quiz || [];
+  const state = quizState[lesson.id] || { picks: {} };
+  const done = Boolean(state.review);
+  const body = items
+    .map((q, i) => {
+      const pick = state.picks[q.id];
+      const opts = q.options
+        .map((opt, oi) => {
+          const on = pick === oi ? " on" : "";
+          const mark = done ? (oi === q.answer ? " is-right" : pick === oi ? " is-wrong" : "") : "";
+          return `<button type="button" class="choice${on}${mark}" data-q="${esc(q.id)}" data-i="${oi}" ${done ? "disabled" : ""}>${esc(opt)}</button>`;
+        })
+        .join("");
+      return `<article class="quiz-q">
+        <p class="quiz-n">Вопрос ${i + 1} из ${items.length}</p>
+        <h4>${esc(q.q)}</h4>
+        <div class="choices">${opts}</div>
+        ${done ? `<p class="quiz-why">${esc(q.why)}</p>` : ""}
+      </article>`;
+    })
+    .join("");
+  const score = done ? `<p class="quiz-score">Верно ${state.score} из ${state.total}</p>` : "";
+  return `
+    ${lessonHead(module, lesson)}
+    <section class="section">
+      <div class="section-label">Проверка</div>
+      <h3>Тест по модулю</h3>
+      <p class="lede">Отметьте один ответ в каждом вопросе. После отправки Кира разберёт ошибки. Это учебная проверка, не экзамен на годность.</p>
+      ${score}
+      <form id="quizForm" class="quiz-form">${body}
+        <p class="form-err" id="quizErr" hidden>Отметьте ответ в каждом вопросе.</p>
+        <div class="row">
+          ${done ? `<button class="btn ghost" type="button" id="quizRetry">пройти ещё раз</button>` : `<button class="btn" type="submit" id="quizSend">отправить на разбор</button>`}
+          ${nextCta(module, lesson)}
+        </div>
+        ${reviewCard(state.review, "разбор теста")}
+      </form>
+    </section>`;
+}
+
+function surveyFieldHtml(field, draft) {
+  const answers = draft.answers || {};
+  const others = draft.others || {};
+  const val = answers[field.id];
+  const otherBox =
+    field.other || (field.options || []).includes("Другое")
+      ? `<input class="survey-other" data-other="${esc(field.id)}" placeholder="Если другое, напишите здесь" value="${esc(others[field.id] || "")}" />`
+      : "";
+  if (field.kind === "text") {
+    return `<label class="survey-q"><span>${esc(field.q)}</span>
+      <textarea data-text="${esc(field.id)}" placeholder="Ответ своими словами">${esc(val || "")}</textarea>
+    </label>`;
+  }
+  if (field.kind === "scale") {
+    const min = field.min ?? 0;
+    const max = field.max ?? 10;
+    const nums = Array.from({ length: max - min + 1 }, (_, i) => min + i)
+      .map((n) => `<button type="button" class="scale-n${val === n ? " on" : ""}" data-scale="${esc(field.id)}" data-n="${n}">${n}</button>`)
+      .join("");
+    return `<div class="survey-q"><span>${esc(field.q)}</span><div class="scale-row">${nums}</div></div>`;
+  }
+  if (field.kind === "scale-group") {
+    const rows = (field.items || [])
+      .map((item, i) => {
+        const cur = (val && val[i]) ?? "";
+        const nums = Array.from({ length: 11 }, (_, n) => `<button type="button" class="scale-n${cur === n ? " on" : ""}" data-sg="${esc(field.id)}" data-sg-i="${i}" data-n="${n}">${n}</button>`).join("");
+        return `<div class="scale-item"><p>${esc(item)}</p><div class="scale-row">${nums}</div></div>`;
+      })
+      .join("");
+    return `<div class="survey-q"><span>${esc(field.q)}</span>${rows}</div>`;
+  }
+  const multi = field.kind === "multi";
+  const selected = multi ? new Set(val || []) : new Set(val != null && val !== "" ? [val] : []);
+  const opts = (field.options || [])
+    .map((opt) => `<button type="button" class="choice${selected.has(opt) ? " on" : ""}" data-field="${esc(field.id)}" data-kind="${multi ? "multi" : "single"}" data-val="${esc(opt)}">${esc(opt)}</button>`)
+    .join("");
+  return `<div class="survey-q"><span>${esc(field.q)}${multi && field.max ? " До " + field.max + "." : ""}</span>
+    <div class="choices">${opts}</div>${otherBox}</div>`;
+}
+
+function surveyHtml(module, lesson) {
+  const spec = course.surveys[lesson.surveyId];
+  const draft = surveyState[lesson.id] || { answers: {}, others: {} };
+  const done = Boolean(draft.review);
+  const blocks = (spec.blocks || [])
+    .map((block) => `<fieldset class="survey-block" ${done ? "disabled" : ""}>
+      <legend>${esc(block.title)}</legend>
+      ${block.fields.map((f) => surveyFieldHtml(f, draft)).join("")}
+    </fieldset>`)
+    .join("");
+  return `
+    ${lessonHead(module, lesson)}
+    <section class="section">
+      <div class="section-label">Анкета</div>
+      <h3>${esc(spec.title)}</h3>
+      <p class="lede">${esc(spec.lead)}</p>
+      <form id="surveyForm" class="survey-form">${blocks}
+        <p class="form-err" id="surveyErr" hidden>Заполните все поля анкеты, затем отправьте.</p>
+        <div class="row">
+          ${done ? `<button class="btn ghost" type="button" id="surveyRetry">изменить ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить анкету</button>`}
+          ${nextCta(module, lesson)}
+        </div>
+        ${reviewCard(draft.review, "разбор анкеты")}
+      </form>
     </section>`;
 }
 
@@ -821,7 +1098,11 @@ function bindStart() {
     go("/apply");
   };
   const goLogin = () => go("/login");
-  const goCourse = () => go("/lesson/" + firstLessonId());
+  const goCourse = () => go("/lesson/" + continueLessonId());
+  const goFree = () => {
+    if (user) go("/lesson/" + continueLessonId());
+    else goApply("");
+  };
   const login = document.getElementById("toLogin");
   const applyBtn = document.getElementById("toApply");
   const courseNav = document.getElementById("toCourseNav");
@@ -829,8 +1110,9 @@ function bindStart() {
   if (login) login.onclick = goLogin;
   if (applyBtn) applyBtn.onclick = () => goApply("");
   document.querySelectorAll("#toCourse").forEach((el) => { el.onclick = goCourse; });
+  document.querySelectorAll("#toFree").forEach((el) => { el.onclick = goFree; });
   if (courseNav) courseNav.onclick = goCourse;
-  if (closingStart) closingStart.onclick = () => goApply("");
+  if (closingStart) closingStart.onclick = goFree;
 }
 
 function bindLogin() {
@@ -845,9 +1127,7 @@ function bindLogin() {
     user = { id: "u-" + email, name, email };
     save(LS.user, user);
     await post("/auth/login", user);
-    if (paid) go("/lesson/" + firstLessonId());
-    else if (applyDone()) go("/pay");
-    else go("/apply");
+    go("/lesson/" + continueLessonId());
   };
 }
 
@@ -892,7 +1172,7 @@ function bindApply() {
     };
     save(LS.user, user);
     await post("/apply", { user, apply });
-    go("/pay");
+    go("/lesson/m0-l1");
   };
 }
 
@@ -905,7 +1185,7 @@ function bindPay() {
     paid = true;
     save(LS.paid, true);
     await post("/pay/stub", { userId: user.id });
-    go("/lesson/" + firstLessonId());
+    go("/lesson/" + continueLessonId());
   };
 }
 
@@ -926,9 +1206,20 @@ function bindShell() {
 }
 
 function bindLesson() {
+  const { lesson } = findLesson(currentId);
+  if (lockReason(currentId)) return;
+  if (lesson.type === "quiz") {
+    bindQuiz(lesson);
+    return;
+  }
+  if (lesson.type === "survey") {
+    bindSurvey(lesson);
+    return;
+  }
   const send = document.getElementById("hwSend");
   const mark = document.getElementById("markDone");
   const area = document.getElementById("hwText");
+  if (!send || !mark || !area) return;
   send.onclick = async () => {
     const text = area.value.trim();
     if (text.length < 12) {
@@ -947,6 +1238,172 @@ function bindLesson() {
   };
   mark.onclick = () => {
     progress[currentId] = !progress[currentId];
+    save(LS.progress, progress);
+    render();
+  };
+}
+
+function bindQuiz(lesson) {
+  const form = document.getElementById("quizForm");
+  if (!form) return;
+  quizState[lesson.id] = quizState[lesson.id] || { picks: {} };
+  form.querySelectorAll("button[data-q]").forEach((btn) => {
+    btn.onclick = () => {
+      if (quizState[lesson.id].review) return;
+      quizState[lesson.id].picks[btn.dataset.q] = Number(btn.dataset.i);
+      save(LS.quiz, quizState);
+      render();
+    };
+  });
+  const retry = document.getElementById("quizRetry");
+  if (retry) {
+    retry.onclick = () => {
+      quizState[lesson.id] = { picks: {} };
+      save(LS.quiz, quizState);
+      render();
+    };
+  }
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const items = lesson.quiz || [];
+    const picks = quizState[lesson.id].picks || {};
+    if (items.some((q) => picks[q.id] == null)) {
+      const err = document.getElementById("quizErr");
+      if (err) err.hidden = false;
+      return;
+    }
+    const send = document.getElementById("quizSend");
+    if (send) {
+      send.disabled = true;
+      send.textContent = "проверяет…";
+    }
+    const review = await reviewQuiz(lesson, picks);
+    let score = 0;
+    items.forEach((q) => {
+      if (picks[q.id] === q.answer) score += 1;
+    });
+    quizState[lesson.id] = { picks, review, score, total: items.length };
+    save(LS.quiz, quizState);
+    progress[lesson.id] = true;
+    save(LS.progress, progress);
+    render();
+  };
+}
+
+function bindSurvey(lesson) {
+  const form = document.getElementById("surveyForm");
+  if (!form) return;
+  const spec = course.surveys[lesson.surveyId];
+  surveyState[lesson.id] = surveyState[lesson.id] || { answers: {}, others: {} };
+  const draft = surveyState[lesson.id];
+  const persist = () => save(LS.survey, surveyState);
+
+  form.querySelectorAll("button[data-field]").forEach((btn) => {
+    btn.onclick = () => {
+      if (draft.review) return;
+      const id = btn.dataset.field;
+      const kind = btn.dataset.kind;
+      const val = btn.dataset.val;
+      const field = spec.blocks.flatMap((b) => b.fields).find((f) => f.id === id);
+      if (kind === "multi") {
+        const cur = new Set(draft.answers[id] || []);
+        if (cur.has(val)) cur.delete(val);
+        else {
+          if (field && field.max && cur.size >= field.max) return;
+          cur.add(val);
+        }
+        draft.answers[id] = [...cur];
+      } else {
+        draft.answers[id] = val;
+      }
+      persist();
+      render();
+    };
+  });
+  form.querySelectorAll("button[data-scale]").forEach((btn) => {
+    btn.onclick = () => {
+      if (draft.review) return;
+      draft.answers[btn.dataset.scale] = Number(btn.dataset.n);
+      persist();
+      render();
+    };
+  });
+  form.querySelectorAll("button[data-sg]").forEach((btn) => {
+    btn.onclick = () => {
+      if (draft.review) return;
+      const id = btn.dataset.sg;
+      const i = Number(btn.dataset.sgI);
+      const arr = Array.isArray(draft.answers[id]) ? draft.answers[id].slice() : [];
+      arr[i] = Number(btn.dataset.n);
+      draft.answers[id] = arr;
+      persist();
+      render();
+    };
+  });
+  form.querySelectorAll("[data-text]").forEach((el) => {
+    el.oninput = () => {
+      draft.answers[el.dataset.text] = el.value;
+      persist();
+    };
+  });
+  form.querySelectorAll("[data-other]").forEach((el) => {
+    el.oninput = () => {
+      draft.others[el.dataset.other] = el.value;
+      persist();
+    };
+  });
+  const retry = document.getElementById("surveyRetry");
+  if (retry) {
+    retry.onclick = () => {
+      draft.review = null;
+      persist();
+      render();
+    };
+  }
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    const fields = spec.blocks.flatMap((b) => b.fields);
+    for (const field of fields) {
+      const val = draft.answers[field.id];
+      if (field.kind === "text") {
+        if (!String(val || "").trim()) {
+          const err = document.getElementById("surveyErr");
+          if (err) err.hidden = false;
+          return;
+        }
+      } else if (field.kind === "multi") {
+        if (!val || !val.length) {
+          const err = document.getElementById("surveyErr");
+          if (err) err.hidden = false;
+          return;
+        }
+      } else if (field.kind === "scale") {
+        if (val == null || val === "") {
+          const err = document.getElementById("surveyErr");
+          if (err) err.hidden = false;
+          return;
+        }
+      } else if (field.kind === "scale-group") {
+        if (!Array.isArray(val) || field.items.some((_, i) => val[i] == null)) {
+          const err = document.getElementById("surveyErr");
+          if (err) err.hidden = false;
+          return;
+        }
+      } else if (val == null || val === "") {
+        const err = document.getElementById("surveyErr");
+        if (err) err.hidden = false;
+        return;
+      }
+    }
+    const send = document.getElementById("surveySend");
+    if (send) {
+      send.disabled = true;
+      send.textContent = "проверяет…";
+    }
+    const review = await reviewSurvey(lesson, spec, draft);
+    draft.review = review;
+    persist();
+    progress[lesson.id] = true;
     save(LS.progress, progress);
     render();
   };
@@ -1117,6 +1574,75 @@ async function reviewHomework(lessonId, text) {
       concrete ? "Есть опора на факт. Это правильный регистр курса." : "Добавьте время, место, действие. Иначе останется оценка характера.",
       blame ? "Отделите факт от самообвинения. «Я плохая» закрывает исследование." : "Пока текст не сваливается в ярлык характера. Удержите это.",
       "Если Кира на сервере доступна, следующий разбор пойдёт через неё глубже.",
+    ],
+  };
+}
+
+async function reviewQuiz(lesson, picks) {
+  const items = lesson.quiz || [];
+  let score = 0;
+  const misses = [];
+  items.forEach((q) => {
+    if (picks[q.id] === q.answer) score += 1;
+    else misses.push(q.why);
+  });
+  return {
+    summary:
+      score === items.length
+        ? "Все ответы совпали с рамкой модуля. Ниже коротко, зачем курс так формулирует каждую норму."
+        : "Верно " + score + " из " + items.length + ". Разбор по тем вопросам, где рамка курса другая.",
+    points:
+      misses.length
+        ? misses.slice(0, 4)
+        : [
+            "Вы держите рабочее определение, а не бытовой ярлык.",
+            "Дальше важнее факт из своей жизни, чем идеальный тест.",
+          ],
+  };
+}
+
+async function reviewSurvey(lesson, spec, draft) {
+  const answers = draft.answers || {};
+  const texts = spec.blocks
+    .flatMap((b) => b.fields)
+    .filter((f) => f.kind === "text")
+    .map((f) => String(answers[f.id] || ""));
+  const long = texts.some((t) => t.length > 40);
+  const blame = /я плох|я виноват|я эгоист|я слабая/i.test(texts.join(" "));
+  if (spec.id === "intro") {
+    return {
+      summary: "Анкета собрана. Это вход в четыре вебинара, не диагноз и не оценка «достаточно ли вы осознанны».",
+      points: [
+        long
+          ? "В ситуации есть свои слова. Это лучше общей формулы «у меня созависимость»."
+          : "Если получится, добавьте в ситуацию один факт: кто, как давно, что происходит сейчас.",
+        blame
+          ? "Отделите описание сцены от ярлыка характера. Курс работает с фактом, не с приговором себе."
+          : "Запрос можно будет уточнять. Первые две встречи опираются как раз на эту анкету.",
+        "Следующий шаг модуля: тест по рамке. Потом, после оплаты, откроется вебинар 1.",
+      ],
+    };
+  }
+  if (spec.id === "mid") {
+    return {
+      summary: "Промежуточная обратная связь принята. По ней видно, где уже есть сдвиг и где ещё болит.",
+      points: [
+        long
+          ? "Открытие и практика названы своими словами. Это как раз материал для вебинаров 3 и 4."
+          : "Если что-то уже пробовали в жизни, допишите один эпизод. Так проще увидеть, что менять дальше.",
+        "Сложная проблема после модуля 2 часто про вину и про «если не я, развалится». Это поле вебинара 3.",
+        "Нехватка практики или разборов не значит, что вы «не тянете». Это сигнал маршрута, не оценка.",
+      ],
+    };
+  }
+  return {
+    summary: "Итоги курса собраны. Это учебная фиксация сдвига за четыре недели, не клиническое заключение.",
+    points: [
+      long
+        ? "История пути уже отличается от входа. Имеет смысл перечитать анкету 1 рядом с этой."
+        : "Если добавить, что изменилось в одном обычном дне, сдвиг станет заметнее вам самим.",
+      "Следующий шаг выбирайте по актуальной проблеме, а не по чувству, что «надо продолжать всё».",
+      "Если дали согласие на отзыв, его можно будет взять отдельно. Здесь ответы остаются в кабинете.",
     ],
   };
 }
