@@ -1,0 +1,18 @@
+# dev artifacts
+_preview/
+_shots/
+node_modules/
+package.json
+package-lock.json
+.DS_Store
+Thumbs.db
+
+# unused legacy assets (kept locally, not shipped)
+assets/hero.jpg
+assets/logo_nav.png
+assets/logo_nav.webp
+assets/school-logo.webp
+assets/journey-*.webp
+assets/studio/atlas-*.jpg
+assets/studio/tool-*.jpg
+assets/studio/_refs/
