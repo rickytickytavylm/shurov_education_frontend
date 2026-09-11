@@ -295,6 +295,8 @@ function pwaOpenBtn(label, cls) {
 }
 
 function route() {
+  document.body.classList.remove("rail-slim");
+  railY = 0;
   const { path, id } = parseHash();
   if (HOME_SECTIONS.has(path) && !id) {
     const needRender = view !== "start" || !$app.querySelector(".site");
@@ -1258,6 +1260,26 @@ function bindPay() {
   };
 }
 
+let railY = 0;
+function bindRailHide() {
+  if (window.SE_RAIL_BOUND) return;
+  window.SE_RAIL_BOUND = true;
+  const tick = () => {
+    const rail = document.querySelector(".step-rail");
+    if (!rail || window.matchMedia("(min-width: 721px)").matches) {
+      document.body.classList.remove("rail-slim");
+      railY = window.scrollY || 0;
+      return;
+    }
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    if (y < 16) document.body.classList.remove("rail-slim");
+    else if (y > railY + 8) document.body.classList.add("rail-slim");
+    else if (y < railY - 8) document.body.classList.remove("rail-slim");
+    railY = y;
+  };
+  window.addEventListener("scroll", tick, { passive: true });
+}
+
 function bindShell() {
   $app.querySelectorAll(".lessons a, .lesson-rail a, .step-rail a").forEach((a) => {
     a.addEventListener("click", (e) => {
@@ -1795,6 +1817,7 @@ if (course && $app) {
   route();
   bindCookie();
   bindPwa();
+  bindRailHide();
 } else if ($app) {
   $app.innerHTML = `<div class="flow"><div class="flow-main"><p class="eye">Кабинет</p><h1>Файлы курса не загрузились</h1><p class="lead">Обновите страницу с главной ссылки сайта. Демо работает без сервера, в браузере.</p></div></div>`;
   bindCookie();

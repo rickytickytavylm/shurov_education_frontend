@@ -2055,6 +2055,19 @@ html, body { background: var(--snow); color: var(--ink); }
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
     scrollbar-width: none;
+    max-height: 72px;
+    transform: translateY(0);
+    opacity: 1;
+    transition: max-height 0.28s ease, padding 0.28s ease, opacity 0.22s ease, border-width 0.22s ease;
+  }
+  body.rail-slim .step-rail {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-bottom-width: 0;
+    pointer-events: none;
+    overflow: hidden;
   }
   .step-rail::-webkit-scrollbar { display: none; }
   .step-rail a {
