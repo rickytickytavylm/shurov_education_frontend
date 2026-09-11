@@ -420,18 +420,20 @@ function startHtml() {
           </nav>
           ${navCta}
         </header>
-        <div class="hero-east">
-          <h1>Любить, не теряя себя</h1>
-          ${heroCta}
-        </div>
-        <div class="hero-west">
-          <p>Клиническая онлайн-программа доктора Шурова по преодолению созависимости. Бесплатный вводный практикум, четыре фундаментальных модуля, пошаговый контроль усвоения, глубокие анкеты и круглосуточный AI-тьютор Кира AI.</p>
-          <div class="chips">
-            <a href="#free">Бесплатный практикум</a>
-            <a href="#app-install">Веб-приложение</a>
-            <a href="#program">Учебный план</a>
-            <span>Кира AI</span>
-            <span>4 модуля</span>
+        <div class="hero-copy">
+          <div class="hero-east">
+            <h1>Любить, не теряя себя</h1>
+            ${heroCta}
+          </div>
+          <div class="hero-west">
+            <p>Клиническая программа по созависимости: бесплатный практикум, четыре модуля и Кира AI.</p>
+            <div class="chips">
+              <a href="#free">Бесплатный практикум</a>
+              <a href="#app-install">Веб-приложение</a>
+              <a href="#program">Учебный план</a>
+              <span>Кира AI</span>
+              <span>4 модуля</span>
+            </div>
           </div>
         </div>
       </section>
