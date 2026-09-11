@@ -579,8 +579,8 @@ function applyHtml() {
         <form id="applyForm" class="stack-form">
           ${field}
           <div class="actions">
-            ${applyStep > 0 ? `<button class="btn ghost" type="button" id="applyBack">назад</button>` : `<a class="btn ghost" href="#/">на стартовую</a>`}
             <button class="btn" type="submit" id="applyNext">${n === total ? "в бесплатный модуль" : "дальше"}</button>
+            ${applyStep > 0 ? `<button class="text-link" type="button" id="applyBack">назад</button>` : `<a class="text-link" href="#/">на стартовую</a>`}
           </div>
         </form>
       </div>
