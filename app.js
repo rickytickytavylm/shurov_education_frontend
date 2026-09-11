@@ -10,9 +10,10 @@ const LS = {
   survey: "se_survey",
 };
 
-const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
+const api = "";
 const course = window.COURSE;
 const $app = document.getElementById("app");
+const asset = window.asset || ((p) => String(p || "").replace(/^\//, ""));
 
 const APPLY_STEPS = [
   {
@@ -104,7 +105,7 @@ toolState.script ||= {};
 toolState.halt ||= {};
 toolState.pause ||= [];
 let view = "start";
-let currentId = firstLessonId();
+let currentId = course && course.modules && course.modules[0] ? firstLessonId() : "m0-l1";
 let applyDraft = { ...apply };
 let applyStep = firstApplyStep();
 
@@ -369,8 +370,8 @@ function startHtml() {
     <div class="site">
       <section class="hero" id="top">
         <picture class="hero-pic">
-          <source media="(max-width: 720px)" srcset="/assets/hero-mobile.webp" type="image/webp" />
-          <img class="hero-bg" src="/assets/hero-4k.webp" alt="Школа доктора Шурова" fetchpriority="high" />
+          <source media="(max-width: 720px)" srcset="${asset("assets/hero-mobile.webp")}" type="image/webp" />
+          <img class="hero-bg" src="${asset("assets/hero-4k.webp")}" alt="Школа доктора Шурова" fetchpriority="high" />
         </picture>
         <div class="hero-shade"></div>
         <header class="nav">
@@ -407,7 +408,7 @@ function startHtml() {
       </section>
 
       <section class="free-mod" id="free">
-        <img class="free-mod-bg" src="/assets/free-module.webp" alt="" />
+        <img class="free-mod-bg" src="${asset("assets/free-module.webp")}?v=2" alt="" />
         <div class="free-mod-shade"></div>
         <div class="free-mod-copy">
           <p class="kicker">Бесплатный модуль · около 40 минут</p>
@@ -575,13 +576,22 @@ function shellHtml(inner) {
     })
     .join("");
   const doc = course.doctor || {};
+  const here = findLesson(currentId);
   const rail = course.modules
     .map((m) => {
       const lesson = lessonsOf(m)[0];
-      const on = view === "lesson" && findLesson(currentId).module.id === m.id ? " on" : "";
+      const on = view === "lesson" && here.module.id === m.id ? " on" : "";
       const done = moduleComplete(m) ? " is-done" : "";
       const lock = canOpenModule(m) ? "" : " is-lock";
       return `<a class="${on}${done}${lock}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный модуль" : "Вебинар " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
+    })
+    .join("");
+  const steps = lessonsOf(here.module)
+    .map((l, i) => {
+      const on = view === "lesson" && currentId === l.id ? " on" : "";
+      const done = progress[l.id] ? " is-done" : "";
+      const lock = canOpenLesson(l.id) ? "" : " is-lock";
+      return `<a class="${on}${done}${lock}" href="#/lesson/${l.id}" data-id="${l.id}"><em>${i + 1}</em><span>${esc(l.title)}</span></a>`;
     })
     .join("");
   return `
@@ -597,7 +607,7 @@ function shellHtml(inner) {
         </nav>
         <button class="text-link light" type="button" id="logout">выйти</button>
       </header>
-      ${view === "lesson" ? `<nav class="lesson-rail" aria-label="Вебинары">${rail}</nav>` : ""}
+      ${view === "lesson" ? `<nav class="lesson-rail" aria-label="Модули">${rail}</nav><nav class="step-rail" aria-label="Шаги модуля">${steps}</nav>` : ""}
       </div>
       <div class="body">
         <aside class="side">
@@ -613,7 +623,7 @@ function shellHtml(inner) {
             <a href="#/tools" class="${view === "tools" ? "on" : ""}">Инструменты</a>
           </div>
           <div class="portrait">
-            <img src="${esc(doc.photo || "/assets/shurov.webp")}" alt="${esc(doc.name || "")}" />
+            <img src="${esc(asset(doc.photo || "assets/shurov.webp"))}" alt="${esc(doc.name || "")}" />
             <div class="cap"><b>${esc(doc.name || "")}</b>${esc(doc.role || "")}</div>
           </div>
         </aside>
@@ -718,7 +728,7 @@ function lessonHtml() {
 
 function lectureHtml(module, lesson) {
   const hw = homework[lesson.id] || { text: "", review: null };
-  const goals = goalsHtml(lesson.goals || module.goals);
+  const goals = goalsHtml(lesson.goals || module.goals || []);
   return `
     ${lessonHead(module, lesson, goals)}
     ${module.free ? "" : `<div class="video" role="img" aria-label="Поле под видео">
@@ -908,7 +918,7 @@ function atlasHtml() {
         <h3>${esc(item.title)}</h3>
         <p class="lede">${esc(item.lead)}</p>
         <figure class="studio-visual">
-          <img src="${esc(item.image)}" alt="${esc(item.title)}" loading="lazy" width="1024" height="576" />
+          <img src="${esc(asset(item.image))}" alt="${esc(item.title)}" loading="lazy" width="1024" height="576" />
         </figure>
         <div class="atlas-body">
           <section class="atlas-block">
@@ -959,7 +969,7 @@ function toolsHtml() {
 
 function toolCard(tool) {
   const visual = tool.image
-    ? `<figure class="studio-visual tool-visual"><img src="${esc(tool.image)}" alt="${esc(tool.title)}" loading="lazy" width="1024" height="576" /></figure>`
+    ? `<figure class="studio-visual tool-visual"><img src="${esc(asset(tool.image))}" alt="${esc(tool.title)}" loading="lazy" width="1024" height="576" /></figure>`
     : "";
   if (tool.kind === "check") {
     const on = new Set(toolState.pause || []);
@@ -1190,7 +1200,7 @@ function bindPay() {
 }
 
 function bindShell() {
-  $app.querySelectorAll(".lessons a, .lesson-rail a").forEach((a) => {
+  $app.querySelectorAll(".lessons a, .lesson-rail a, .step-rail a").forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
       go("/lesson/" + a.dataset.id);
@@ -1440,24 +1450,8 @@ async function askKira(text) {
   kira.push({ id: "think", name: "Кира", me: false, text: "Собираю рамку ответа." });
   save(LS.kira, kira);
   render();
-  const history = kira.slice(-10).map((m) => ({ role: m.me ? "user" : "assistant", text: m.text }));
-  let reply = "";
-  if (api) {
-    try {
-      const r = await fetch(`${api}/api/kira`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, userId: user.id, lessonId: currentId, history }),
-      });
-      if (r.ok) {
-        const data = await r.json();
-        reply = data.text || "";
-      }
-    } catch {
-      /* local */
-    }
-  }
-  if (!reply) reply = localKiraReply(text);
+  await new Promise((r) => setTimeout(r, 420));
+  const reply = localKiraReply(text);
   kira = kira.filter((m) => m.id !== "think");
   kira.push({ id: "k" + Date.now() + "a", name: "Кира", me: false, text: reply });
   save(LS.kira, kira);
@@ -1466,14 +1460,27 @@ async function askKira(text) {
 
 function localKiraReply(text) {
   const q = String(text || "");
+  const { module, lesson } = findLesson(currentId);
+  const here = "Сейчас вы в шаге «" + lesson.title + "» модуля «" + module.title + "».";
   if (/суицид|убить себя|не хочу жить|насили|избивает/i.test(q)) {
     return "Сначала безопасность. Если есть угроза жизни или насилие: 112 в России и очная помощь. К курсу вернёмся, когда вы в безопасном месте.";
   }
-  if (/созавис|слиян|раствор/i.test(q)) return "В курсе созависимость: регуляция себя отдана другому. Это не «слишком сильная любовь». Вебинар 1 и схема «Слияние, контакт, обрыв» в разделе «Как это устроено».";
-  if (/карпман|треугольник/i.test(q)) return "Треугольник Карпмана: жертва, преследователь, спасатель. Роли крутятся. Курс ведёт в контакт: ясность, уязвимость, забота без захвата. Схема в разделе «Как это устроено».";
-  if (/спасательств|enable|выпил|алкогол/i.test(q)) return "Спасательство снимает у другого последствие. Забота оставляет ему выбор. Курс не лечит зависимого через вас. Пауза 24 часа, если нет угрозы жизни. Это вебинар 2.";
-  if (/винова|разочаров|сказать нет/i.test(q)) return "Право разочаровать: остаться при своём, когда другой вздыхает или злится. Вина ломает границу быстрее крика. Конструктор фразы в инструментах.";
-  return "Опишите один факт: что произошло и что вы сделали или не сказали. Либо спросите термин, либо номер вебинара. Если сервер кабинета доступен, разбор будет глубже.";
+  if (/созавис|слиян|раствор/i.test(q)) {
+    return here + " В рамке курса созависимость это не «слишком сильная любовь» и не диагноз из справочника. Это устойчивый способ регулировать себя через состояние другого: его тон, трезвость, молчание задают ваш день. Любовь может быть настоящей. Предмет работы: где ещё сохраняется ваш контур, а где вы уже система жизнеобеспечения. Это вводный модуль и вебинар 1. Схема «Слияние, контакт, обрыв» в разделе «Как это устроено».";
+  }
+  if (/карпман|треугольник/i.test(q)) {
+    return here + " Треугольник Карпмана: жертва, спасатель, преследователь. Роли крутятся за один вечер. Выход не в «правильной роли», а в контакте: ясность, уязвимость, забота без захвата. Разбор схемы в разделе «Как это устроено», практика в вебинаре 2.";
+  }
+  if (/спасательств|enable|выпил|алкогол/i.test(q)) {
+    return here + " Спасательство забирает у другого встречу с последствием. Забота оставляет выбор, информацию и границу вашего участия. Курс не лечит зависимого через вас. Если нет угрозы жизни, пауза допустима. Три вопроса перед помощью: он просил? он может сам? что останется ему после моей помощи? Это вебинар 2 и лист «Чья это работа».";
+  }
+  if (/винова|разочаров|сказать нет|границ/i.test(q)) {
+    return here + " Право разочаровать: сохранить свою позицию, когда другой вздыхает, злится или умолкает. Граница чаще ломается о вину, а не о крик. Формулировка вторична. Первично не бросаться чинить его чувство сразу после правды. Это вебинар 3 и конструктор фразы в инструментах.";
+  }
+  if (/домашк|задани|провери|разбор/i.test(q)) {
+    return here + " Для разбора нужен факт: время, место, действие. Не «я всегда такая», а сцена из этой недели. Отправьте текст в уроке кнопкой «отправить на проверку». Я разберу его в учебном режиме: где факт, где ярлык, какой следующий вопрос.";
+  }
+  return here + " Опишите один факт: что произошло и что вы сделали или не сказали. Можно спросить термин курса, номер вебинара или схему из раздела «Как это устроено». Диагноз не ставлю. Это учебный разбор по рамке курса.";
 }
 
 function bindTools() {
@@ -1553,18 +1560,7 @@ async function post(path, body) {
 }
 
 async function reviewHomework(lessonId, text) {
-  if (api) {
-    try {
-      const r = await fetch(`${api}/api/homework`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId, text, userId: user.id }),
-      });
-      if (r.ok) return await r.json();
-    } catch {
-      /* stub */
-    }
-  }
+  await new Promise((r) => setTimeout(r, 360));
   const { lesson } = findLesson(lessonId);
   const blame = /я плох|я эгоист|я виноват/i.test(text);
   const concrete = /утром|вечером|вчера|сегодня|сказал|сделал|не сказал/i.test(text);
@@ -1573,12 +1569,13 @@ async function reviewHomework(lessonId, text) {
     points: [
       concrete ? "Есть опора на факт. Это правильный регистр курса." : "Добавьте время, место, действие. Иначе останется оценка характера.",
       blame ? "Отделите факт от самообвинения. «Я плохая» закрывает исследование." : "Пока текст не сваливается в ярлык характера. Удержите это.",
-      "Если Кира на сервере доступна, следующий разбор пойдёт через неё глубже.",
+      "Кира в кабинете может разобрать тот же эпизод, если пришлёте ей этот факт.",
     ],
   };
 }
 
 async function reviewQuiz(lesson, picks) {
+  await new Promise((r) => setTimeout(r, 320));
   const items = lesson.quiz || [];
   let score = 0;
   const misses = [];
@@ -1602,6 +1599,7 @@ async function reviewQuiz(lesson, picks) {
 }
 
 async function reviewSurvey(lesson, spec, draft) {
+  await new Promise((r) => setTimeout(r, 320));
   const answers = draft.answers || {};
   const texts = spec.blocks
     .flatMap((b) => b.fields)
@@ -1670,6 +1668,11 @@ function bindCookie() {
   };
 }
 
-window.addEventListener("hashchange", route);
-route();
-bindCookie();
+if (course && $app) {
+  window.addEventListener("hashchange", route);
+  route();
+  bindCookie();
+} else if ($app) {
+  $app.innerHTML = `<div class="flow"><div class="flow-main"><p class="eye">Кабинет</p><h1>Файлы курса не загрузились</h1><p class="lead">Обновите страницу с главной ссылки сайта. Демо работает без сервера, в браузере.</p></div></div>`;
+  bindCookie();
+}
