@@ -695,7 +695,6 @@ function shellHtml(inner) {
         <a href="#/lesson/${esc(currentId)}" class="${view === "lesson" ? "on" : ""}">уроки</a>
         <a href="#/kira" class="${view === "kira" ? "on" : ""}">кира ai</a>
         <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">разбор</a>
-        <a href="#/tools" class="${view === "tools" ? "on" : ""}">практика</a>
       </nav>
     </div>`;
 }
@@ -810,9 +809,7 @@ function lectureHtml(module, lesson) {
         <p class="hint">${esc(lesson.homework.hint)}</p>
         <textarea id="hwText" placeholder="Сформулируйте ваш ответ на основе конкретного факта из жизни">${esc(hw.text)}</textarea>
         <div class="row">
-          <button class="btn" type="button" id="hwSend">отправить на разбор Кире AI</button>
-          <button class="btn ghost" type="button" id="markDone">${progress[lesson.id] ? "шаг завершен" : "отметить выполненным"}</button>
-          <a class="btn ghost" href="#/kira">обсудить с Кирой AI</a>
+          <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить на разбор"}</button>
           ${nextCta(module, lesson)}
         </div>
         ${reviewCard(hw.review, "Клинический разбор Киры AI")}
@@ -962,8 +959,8 @@ function kiraHtml() {
     <div class="chat-wrap kira-wrap">
       <div class="chat-log" id="kiraLog">${msgs}</div>
       <form class="chat-in" id="kiraForm">
-        <input name="text" autocomplete="off" placeholder="Задайте вопрос по материалам курса или опишите ситуацию" />
-        <button class="btn" type="submit">спросить Киру AI</button>
+        <input name="text" autocomplete="off" placeholder="Вопрос по курсу или ситуация" />
+        <button class="btn" type="submit">отправить</button>
       </form>
     </div>`;
 }
@@ -1289,9 +1286,8 @@ function bindLesson() {
     return;
   }
   const send = document.getElementById("hwSend");
-  const mark = document.getElementById("markDone");
   const area = document.getElementById("hwText");
-  if (!send || !mark || !area) return;
+  if (!send || !area) return;
   send.onclick = async () => {
     const text = area.value.trim();
     if (text.length < 12) {
@@ -1306,11 +1302,6 @@ function bindLesson() {
     progress[currentId] = true;
     save(LS.progress, progress);
     send.disabled = false;
-    render();
-  };
-  mark.onclick = () => {
-    progress[currentId] = !progress[currentId];
-    save(LS.progress, progress);
     render();
   };
 }
