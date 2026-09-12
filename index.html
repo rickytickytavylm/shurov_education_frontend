@@ -29,12 +29,20 @@
   <link rel="image_src" href="https://rickytickytavylm.github.io/shurov_education_frontend/og.jpg?v=1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script>
+    document.addEventListener("click", function (e) {
+      var t = e.target && e.target.closest && e.target.closest("#logout");
+      if (!t) return;
+      try { localStorage.clear(); } catch (err) {}
+      try { sessionStorage.clear(); } catch (err) {}
+    }, true);
+  </script>
   <script src="config.js?v=3"></script>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/pwa-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Play:wght@400;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=43" />
+  <link rel="stylesheet" href="styles.css?v=44" />
 </head>
 <body>
   <div id="app"></div>
@@ -75,6 +83,6 @@
     <button type="button" id="cookieOk">Ok</button>
   </div>
   <script src="course.js?v=10"></script>
-  <script src="app.js?v=38"></script>
+  <script src="app.js?v=39"></script>
 </body>
 </html>

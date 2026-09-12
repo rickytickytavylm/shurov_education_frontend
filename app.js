@@ -129,6 +129,32 @@ function moduleComplete(mod) {
   return list.length > 0 && list.every((l) => Boolean(progress[l.id]));
 }
 
+function hardReset() {
+  try {
+    localStorage.clear();
+  } catch (_) {}
+  try {
+    sessionStorage.clear();
+  } catch (_) {}
+  Object.keys(LS).forEach((k) => {
+    try {
+      localStorage.removeItem(LS[k]);
+    } catch (_) {}
+  });
+  user = null;
+  apply = {};
+  applyDraft = {};
+  paid = false;
+  progress = {};
+  homework = {};
+  quizState = {};
+  surveyState = {};
+  cert = {};
+  guideSeen = false;
+  location.hash = "/";
+  location.reload();
+}
+
 function onboardingDone() {
   const picked = cert.consent === "yes" || cert.consent === "no";
   if (!picked || !cert.saved) return false;
@@ -297,23 +323,17 @@ function route() {
   } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library") {
     view = user ? path : nextPublic();
   } else if (path === "login") {
-    if (user) {
-      view = onboardingDone() ? "lesson" : "guide";
-      currentId = continueLessonId();
-    } else view = "login";
+    if (user) view = "guide";
+    else view = "login";
   } else if (path === "apply") {
-    if (user) {
-      view = onboardingDone() ? "lesson" : "guide";
-      currentId = continueLessonId();
-    } else {
+    if (user) view = "guide";
+    else {
       view = "apply";
       applyStep = firstApplyStep();
     }
   } else if (path === "pay") {
-    if (paid && user) {
-      view = onboardingDone() ? "lesson" : "guide";
-      currentId = continueLessonId();
-    } else view = applyDone() || user ? "pay" : "apply";
+    if (paid && user) view = "guide";
+    else view = applyDone() || user ? "pay" : "apply";
   } else {
     view = "start";
   }
@@ -1419,9 +1439,9 @@ function bindStart() {
     go("/apply");
   };
   const goLogin = () => go("/login");
-  const goCourse = () => go(onboardingDone() ? "/lesson/" + continueLessonId() : "/guide");
+  const goCourse = () => go(user ? "/guide" : "/login");
   const goFree = () => {
-    if (user) go("/lesson/" + continueLessonId());
+    if (user) go("/guide");
     else goApply("");
   };
   const login = document.getElementById("toLogin");
@@ -1556,12 +1576,9 @@ function bindShell() {
   });
   const out = document.getElementById("logout");
   if (out) {
-    out.onclick = () => {
-      try {
-        localStorage.clear();
-      } catch (_) {}
-      location.hash = "/";
-      location.reload();
+    out.onclick = (e) => {
+      e.preventDefault();
+      hardReset();
     };
   }
 }
