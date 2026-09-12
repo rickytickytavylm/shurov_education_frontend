@@ -8,6 +8,7 @@ package-lock.json
 Thumbs.db
 
 # unused legacy assets (kept locally, not shipped)
+assets/guide-*.jpg
 assets/hero.jpg
 assets/logo_nav.png
 assets/logo_nav.webp

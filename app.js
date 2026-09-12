@@ -12,7 +12,8 @@ const LS = {
   guide: "se_guide",
 };
 
-const api = "";
+const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
+const INTRO_SURVEY = "m0-l3";
 const course = window.COURSE;
 const $app = document.getElementById("app");
 const asset = window.asset || ((p) => String(p || "").replace(/^\//, ""));
@@ -157,10 +158,27 @@ function hardReset() {
 
 let focusCert = false;
 
-function onboardingDone() {
+function certDone() {
   const picked = cert.consent === "yes" || cert.consent === "no";
   if (!picked || !cert.saved) return false;
   return ["fio", "passport", "issued", "code", "address"].every((k) => String(cert[k] || "").trim());
+}
+
+function introSurveyDone() {
+  const d = surveyState[INTRO_SURVEY];
+  return Boolean(d && (d.submitted || d.review));
+}
+
+function onboardingDone() {
+  return certDone() && introSurveyDone();
+}
+
+function pulseBox(id) {
+  const box = document.getElementById(id);
+  if (!box) return;
+  box.classList.remove("is-need");
+  void box.offsetWidth;
+  box.classList.add("is-need");
 }
 
 function showCertNeed() {
@@ -169,13 +187,23 @@ function showCertNeed() {
     err.hidden = false;
     err.textContent = "Сначала отметьте согласие или отказ и сохраните данные. Без этого уроки закрыты.";
   }
-  const box = document.getElementById("certBox");
-  if (box) {
-    box.classList.remove("is-need");
-    void box.offsetWidth;
-    box.classList.add("is-need");
-  }
+  pulseBox("certBox");
   revealReply("certBox");
+}
+
+function showSurveyNeed() {
+  const err = document.getElementById("surveyErr");
+  if (err) {
+    err.hidden = false;
+    err.textContent = "Сначала заполните анкету на старте. Без неё уроки закрыты.";
+  }
+  pulseBox("introSurveyBox");
+  revealReply("introSurveyBox");
+}
+
+function showOnboardingNeed() {
+  if (!certDone()) showCertNeed();
+  else showSurveyNeed();
 }
 
 function blockLessons(e) {
@@ -186,7 +214,7 @@ function blockLessons(e) {
     go("/guide");
     return true;
   }
-  showCertNeed();
+  showOnboardingNeed();
   return true;
 }
 
@@ -342,7 +370,7 @@ function route() {
         view = "guide";
         render();
       }
-      requestAnimationFrame(() => showCertNeed());
+      requestAnimationFrame(() => showOnboardingNeed());
       return;
     }
     currentId = id;
@@ -833,7 +861,7 @@ function lockedHtml(reason, module, lesson) {
     action = `<a class="btn" href="#/lesson/${esc(jump)}">перейти к незавершенному шагу</a>`;
   } else if (reason === "need-guide") {
     title = "Сначала оформите старт";
-    text = "Выберите согласие или отказ на сертификат и сохраните данные на экране «Как всё устроено». Без этого уроки закрыты.";
+    text = "На старте отметьте согласие или отказ, сохраните данные и заполните анкету. Без этого уроки закрыты.";
     action = `<a class="btn" href="#/guide">открыть «Как всё устроено»</a>`;
   } else if (reason === "need-prev-lesson") {
     title = "Соблюдайте последовательность";
@@ -1003,7 +1031,7 @@ function surveyFieldHtml(field, draft) {
 function surveyHtml(module, lesson) {
   const spec = course.surveys[lesson.surveyId];
   const draft = surveyState[lesson.id] || { answers: {}, others: {} };
-  const done = Boolean(draft.review);
+  const done = Boolean(draft.review || draft.submitted);
   const blocks = (spec.blocks || [])
     .map((block) => `<fieldset class="survey-block" ${done ? "disabled" : ""}>
       <legend>${esc(block.title)}</legend>
@@ -1022,7 +1050,7 @@ function surveyHtml(module, lesson) {
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить</button>`}
           ${nextCta(module, lesson)}
         </div>
-        <div class="reply-slot" id="surveyThread">${reviewCard(draft.review, "Разбор Киры AI", "surveyReply")}</div>
+        <div class="reply-slot" id="surveyThread">${draft.submitted && !draft.review ? `<div class="cert-saved">Анкета сохранена в профиле — та же, что на старте.</div>` : ""}${reviewCard(draft.review, "Разбор Киры AI", "surveyReply")}</div>
       </form>
     </section>`;
 }
@@ -1039,12 +1067,43 @@ function lectureBlocks(lecture) {
     .join("");
 }
 
+function guideShot(src, alt) {
+  return `<figure class="studio-visual guide-shot">
+    <img src="${esc(asset(src))}" alt="${esc(alt)}" loading="lazy" width="1280" height="720" />
+  </figure>`;
+}
+
+function introSurveyPanel() {
+  const spec = course.surveys && course.surveys.intro;
+  if (!spec) return "";
+  const draft = surveyState[INTRO_SURVEY] || { answers: {}, others: {} };
+  const done = Boolean(draft.submitted || draft.review);
+  const blocks = (spec.blocks || [])
+    .map((block) => `<fieldset class="survey-block" ${done ? "disabled" : ""}>
+      <legend>${esc(block.title)}</legend>
+      ${block.fields.map((f) => surveyFieldHtml(f, draft)).join("")}
+    </fieldset>`)
+    .join("");
+  return `
+    <div class="tool-box cert-box" id="introSurveyBox">
+      <h4>${esc(spec.title)}</h4>
+      <p class="cert-lead">${esc(spec.lead)}</p>
+      <form id="surveyForm" class="survey-form">${blocks}
+        <p class="form-err" id="surveyErr" hidden>Пожалуйста, заполните все пункты анкеты перед отправкой.</p>
+        <div class="row">
+          ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">сохранить анкету</button>`}
+        </div>
+        <div class="reply-slot" id="surveyThread">${done ? `<div class="cert-saved">Анкета сохранена. Она привязана к вашему профилю и будет в админке.</div>` : ""}</div>
+      </form>
+    </div>`;
+}
+
 function guideHtml() {
   const consent = cert.consent || "";
   return `
     <p class="crumb">Начало · перед первым уроком</p>
     <h2>Как всё устроено</h2>
-    <p class="lede">Мы рады видеть вас на курсе! Несколько важных моментов перед началом.</p>
+    <p class="lede">Мы рады видеть вас на курсе. Сначала коротко: как устроен путь, кто такая Кира AI, зачем 14 схем — и анкета, без которой уроки не откроются.</p>
 
     <section class="section">
       <div class="section-label">Приветствие эксперта</div>
@@ -1055,13 +1114,56 @@ function guideHtml() {
       </div>
     </section>
 
+    <section class="guide-feat">
+      ${guideShot("assets/guide-path.webp", "Курс как путь")}
+      <div>
+        <p class="section-label">Как устроен курс</p>
+        <h3>Это путь, а не набор лекций</h3>
+        <p class="lede">От понимания, как устроено слияние, — к возвращению опоры на себя. Доступ к материалам — 3 месяца.</p>
+        <ul class="guide-list">
+          <li>4 видеолекции с Василием Александровичем Шуровым</li>
+          <li>Вводный практикум — бонус от команды</li>
+          <li>4 фокус-группы с психологами в Zoom</li>
+          <li>2 индивидуальные консультации</li>
+          <li>Практика после каждой темы и итоговый тест</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="guide-feat is-rev">
+      ${guideShot("assets/guide-kira.webp", "Кира AI")}
+      <div>
+        <p class="section-label">Кира AI</p>
+        <h3>Помощник, который держит курс рядом с вами</h3>
+        <div class="guide-facts">
+          <div><b>Что это</b><p>Кира AI — ассистент программы. Она опирается на лекции доктора Шурова, 14 схем и рабочие листы. Это не «общий чат», а разбор внутри рамки курса.</p></div>
+          <div><b>Как работает</b><p>Пишете как в обычном чате: задание, сцену из вечера, вопрос про границу. Кира отвечает в кадре, без прыжка страницы. Вкладка «Кира» всегда внизу.</p></div>
+          <div><b>Зачем</b><p>Чтобы между лекциями и фокус-группами не оставаться один на один с материалом. Разобрать факт, отделить вину от действия и сформулировать следующий шаг.</p></div>
+        </div>
+        <div class="row"><a class="btn ghost" href="#/kira">открыть Киру AI</a></div>
+      </div>
+    </section>
+
+    <section class="guide-feat">
+      ${guideShot("assets/guide-maps.webp", "14 схем отношений")}
+      <div>
+        <p class="section-label">14 схем</p>
+        <h3>Карты того, как держатся отношения</h3>
+        <div class="guide-facts">
+          <div><b>Зачем вкладка</b><p>Когда тяжело, легко винить себя. Схемы показывают механизм: слияние, спасательство, треугольник, обрыв. Это учебный материал, не диагноз.</p></div>
+          <div><b>Почему так</b><p>Все 14 разобраны одинаково: простыми словами, как выглядит в жизни, почему держится и что меняет курс. Можно вернуться к любой карте в любой момент.</p></div>
+        </div>
+        <div class="row"><a class="btn ghost" href="#/atlas">смотреть 14 схем</a></div>
+      </div>
+    </section>
+
     <section class="section">
-      <div class="section-label">Ваши данные и конфиденциальность</div>
-      <h3>Несколько важных моментов</h3>
+      <div class="section-label">Ваши данные</div>
+      <h3>Лицензия, конфиденциальность, сертификат</h3>
       <div class="guide-facts">
-        <div><b>О школе</b><p>Онлайн-школа работает на основании действующей лицензии №1035-01255-50/01675078 от 27.12.2024, выданной Министерством образования Московской области. Это значит, что обучение официальное, а материалы соответствуют стандартам.</p></div>
-        <div><b>О ваших данных</b><p>Мы бережно относимся к вашей информации и соблюдаем конфиденциальность. Данные используются только для организации обучения.</p></div>
-        <div><b>О налоговом вычете</b><p>В конце года вы сможете воспользоваться правом на налоговый вычет за пройденное обучение — в соответствии с Налоговым кодексом РФ.</p></div>
+        <div><b>О школе</b><p>Онлайн-школа работает на основании лицензии №1035-01255-50/01675078 от 27.12.2024, выданной Министерством образования Московской области.</p></div>
+        <div><b>О ваших данных</b><p>Анкета, прогресс и ответы хранятся на сервере в вашем профиле — по ключу участника. Позже по этому же ключу откроется админка команды.</p></div>
+        <div><b>О налоговом вычете</b><p>В конце года можно оформить налоговый вычет за обучение — по Налоговому кодексу РФ.</p></div>
       </div>
       <div class="tool-box cert-box" id="certBox">
         <h4>Что нужно сделать сейчас</h4>
@@ -1093,58 +1195,32 @@ function guideHtml() {
     </section>
 
     <section class="section">
-      <div class="section-label">Как устроен курс</div>
-      <h3>Курс построен как путь</h3>
-      <p class="lede">От понимания, как устроено слияние, — к возвращению опоры на себя. Доступ к материалам курса — 3 месяца.</p>
-      <ul class="guide-list">
-        <li>4 видеолекции с Василием Александровичем Шуровым</li>
-        <li>Бонус от команды курса — вводный практикум</li>
-        <li>4 фокус-группы с психологами</li>
-        <li>2 индивидуальные консультации с психологом</li>
-        <li>Практические задания после каждой темы</li>
-        <li>Итоговый тест после всех тем. Сертификат при результате 75% и выше</li>
-      </ul>
+      <div class="section-label">Анкета 1 · вводный модуль</div>
+      <h3>Ситуация и запрос</h3>
+      <p class="lede">Это та же анкета, что была уроком 3. Заполните её здесь: команда увидит запрос, Кира будет опираться на него, а уроки откроются после сохранения.</p>
+      ${introSurveyPanel()}
     </section>
 
     <section class="section">
-      <div class="section-label">Команда поддержки</div>
-      <h3>На протяжении курса рядом будут психологи, куратор и ИИ-ассистент</h3>
+      <div class="section-label">Команда и связь</div>
+      <h3>Кто рядом на протяжении курса</h3>
       <div class="guide-team">
         <div><b>Пикулева Екатерина Всеволодовна</b><span>психолог · +7 916 704-49-85 · @KateZhar</span></div>
         <div><b>Родин Алексей Эрикович</b><span>психолог · +7 916 191-32-44 · @Rodin_Alexey</span></div>
         <div><b>Голованова Екатерина Сергеевна</b><span>психолог · +7 968 040-50-05 · @katenka86</span></div>
         <div><b>Дегтярева Ирина Васильевна</b><span>куратор · @Irina_Err</span></div>
-        <div><b>Кира AI</b><span>ИИ-ассистент, который всегда рядом. Поможет разобраться в теме, разобрать личный эпизод и найти опору. Работает на основе программы доктора Шурова.</span></div>
       </div>
-      <p class="lede">Практические фокус-группы проходят в Zoom. Ссылка придёт в чат потока. Проходят без записи.</p>
-    </section>
-
-    <section class="section">
-      <div class="section-label">Общение</div>
-      <h3>Чат потока и каналы связи</h3>
       <ul class="guide-list">
-        <li>Чат потока — для вопросов куратору.</li>
-        <li>Telegram-канал: <a href="https://t.me/shurovsos" target="_blank" rel="noopener">t.me/shurovsos</a></li>
-        <li>Бот в Telegram для напоминаний и поддержки: <a href="https://tvoi-shag.online/tlgrm?bot=getcourse_shurov_bot" target="_blank" rel="noopener">открыть</a></li>
+        <li>Фокус-группы в Zoom. Ссылка придёт в чат потока. Без записи.</li>
+        <li>Чат потока — вопросы куратору</li>
+        <li>Telegram: <a href="https://t.me/shurovsos" target="_blank" rel="noopener">t.me/shurovsos</a></li>
+        <li>Бот в Telegram: <a href="https://tvoi-shag.online/tlgrm?bot=getcourse_shurov_bot" target="_blank" rel="noopener">открыть</a></li>
         <li>Бот в MAX: <a href="https://tvoi-shag.online/pl/maxstart?botId=794" target="_blank" rel="noopener">открыть</a></li>
       </ul>
     </section>
 
-    <section class="section">
-      <div class="section-label">Навигация по платформе</div>
-      <h3>Как пользоваться кабинетом</h3>
-      <div class="guide-facts">
-        <div><b>Как войти</b><p>Вход по личному ключу, который вы получили от команды курса. Если ключ не подходит — напишите куратору в чат потока.</p></div>
-        <div><b>Модули</b><p>Материалы разбиты на модули. В каждом: видеолекция, конспект, практическое задание и проверка из четырёх вопросов — её разбирает Кира AI. Это не экзамен, а возможность проверить, как усвоен материал.</p></div>
-        <div><b>Анкеты</b><p>Анкеты обратной связи помогают нам становиться лучше для вас.</p></div>
-        <div><b>Итоговый тест</b><p>После всех тем — итоговый тест. Возможность закрепить пройденное и получить сертификат при результате 75% и выше.</p></div>
-        <div><b>Литература</b><p>Материалы по теме созависимости: научная основа программы и то, что можно почитать дополнительно.</p></div>
-        <div><b>14 схем</b><p>Раздел, в котором собраны 14 схем, по которым живут созависимые отношения. Каждая схема разобрана одинаково: что это простыми словами, как выглядит в жизни, почему держится и что с этим делает курс. Это учебный материал, не диагностика.</p></div>
-        <div><b>Веб-приложение</b><p>Позволяет пользоваться платформой как обычным приложением на телефоне: быстро открывать уроки, задания и схемы.</p></div>
-      </div>
-      <p class="hint" id="guideGateNote" ${onboardingDone() ? "hidden" : ""}>Сначала отметьте согласие или отказ и сохраните данные выше — без этого уроки закрыты.</p>
-      <div class="row"><a class="btn" id="toLessons" href="#/lesson/${esc(continueLessonId())}">перейти к урокам</a></div>
-    </section>`;
+    <p class="hint" id="guideGateNote" ${onboardingDone() ? "hidden" : ""}>Сначала сохраните данные для сертификата и анкету — без этого уроки закрыты.</p>
+    <div class="row"><a class="btn" id="toLessons" href="#/lesson/${esc(continueLessonId())}">перейти к урокам</a></div>`;
 }
 
 function paintGuideGate() {
@@ -1157,7 +1233,7 @@ function bindGuide() {
   save(LS.guide, true);
   if (focusCert) {
     focusCert = false;
-    requestAnimationFrame(() => showCertNeed());
+    requestAnimationFrame(() => showOnboardingNeed());
   }
   document.querySelectorAll("[data-cert]").forEach((box) => {
     box.addEventListener("change", () => {
@@ -1202,6 +1278,7 @@ function bindGuide() {
       const mark = document.getElementById("certSaved");
       if (mark) mark.hidden = false;
       paintGuideGate();
+      syncProfile();
     };
   }
   const to = document.getElementById("toLessons");
@@ -1210,6 +1287,7 @@ function bindGuide() {
       if (blockLessons(e)) return;
     };
   }
+  bindSurvey(findLesson(INTRO_SURVEY).lesson);
 }
 
 function libraryHtml() {
@@ -1495,6 +1573,8 @@ function bindLogin() {
     paid = true;
     save(LS.paid, true);
     await post("/auth/login", user);
+    await hydrateProfile();
+    await syncProfile();
     go("/guide");
   };
 }
@@ -1542,6 +1622,8 @@ function bindApply() {
     paid = true;
     save(LS.paid, true);
     await post("/apply", { user, apply });
+    await hydrateProfile();
+    await syncProfile();
     go("/guide");
   };
 }
@@ -1640,6 +1722,7 @@ function bindLesson() {
       save(LS.hw, homework);
       progress[currentId] = true;
       save(LS.progress, progress);
+      syncProfile();
     } catch (e) {
       homework[currentId] = {
         text,
@@ -1655,6 +1738,7 @@ function bindLesson() {
       save(LS.hw, homework);
       progress[currentId] = true;
       save(LS.progress, progress);
+      syncProfile();
     }
     render({ keepScroll: true, focus: "hwReply" });
   };
@@ -1702,21 +1786,28 @@ function bindQuiz(lesson) {
     save(LS.quiz, quizState);
     progress[lesson.id] = true;
     save(LS.progress, progress);
+    syncProfile();
     render({ keepScroll: true, focus: lesson.final ? "finalVerdict" : "quizReply" });
   };
 }
 
+function surveyLocked(draft) {
+  return Boolean(draft && (draft.review || draft.submitted));
+}
+
 function bindSurvey(lesson) {
   const form = document.getElementById("surveyForm");
-  if (!form) return;
+  if (!form || !lesson) return;
   const spec = course.surveys[lesson.surveyId];
+  if (!spec) return;
   surveyState[lesson.id] = surveyState[lesson.id] || { answers: {}, others: {} };
   const draft = surveyState[lesson.id];
+  const onStart = Boolean(document.getElementById("introSurveyBox"));
   const persist = () => save(LS.survey, surveyState);
 
   form.querySelectorAll("button[data-field]").forEach((btn) => {
     btn.onclick = () => {
-      if (draft.review) return;
+      if (surveyLocked(draft)) return;
       const id = btn.dataset.field;
       const kind = btn.dataset.kind;
       const val = btn.dataset.val;
@@ -1745,7 +1836,7 @@ function bindSurvey(lesson) {
   });
   form.querySelectorAll("button[data-scale]").forEach((btn) => {
     btn.onclick = () => {
-      if (draft.review) return;
+      if (surveyLocked(draft)) return;
       draft.answers[btn.dataset.scale] = Number(btn.dataset.n);
       persist();
       const row = btn.closest(".scale-row") || btn.parentElement;
@@ -1754,7 +1845,7 @@ function bindSurvey(lesson) {
   });
   form.querySelectorAll("button[data-sg]").forEach((btn) => {
     btn.onclick = () => {
-      if (draft.review) return;
+      if (surveyLocked(draft)) return;
       const id = btn.dataset.sg;
       const i = Number(btn.dataset.sgI);
       const arr = Array.isArray(draft.answers[id]) ? draft.answers[id].slice() : [];
@@ -1781,8 +1872,9 @@ function bindSurvey(lesson) {
   if (retry) {
     retry.onclick = () => {
       draft.review = null;
+      draft.submitted = null;
       persist();
-      render();
+      render(onStart ? { keepScroll: true, focus: "introSurveyBox" } : {});
     };
   }
   form.onsubmit = async (e) => {
@@ -1822,12 +1914,24 @@ function bindSurvey(lesson) {
     }
     const send = document.getElementById("surveySend");
     if (send) send.disabled = true;
+    draft.submitted = true;
+    draft.at = Date.now();
+    if (onStart) {
+      persist();
+      progress[lesson.id] = true;
+      save(LS.progress, progress);
+      await syncProfile();
+      paintGuideGate();
+      render({ keepScroll: true, focus: "introSurveyBox" });
+      return;
+    }
     showPendingIn("surveyThread", "Кира читает анкету…");
     const review = await reviewSurvey(lesson, spec, draft);
     draft.review = review;
     persist();
     progress[lesson.id] = true;
     save(LS.progress, progress);
+    await syncProfile();
     render({ keepScroll: true, focus: "surveyReply" });
   };
 }
@@ -2004,17 +2108,113 @@ function bindTools() {
   });
 }
 
+function userKey() {
+  return (user && user.id) || "";
+}
+
+function hasBackend() {
+  return Boolean(api);
+}
+
+function profilePayload() {
+  return {
+    userId: userKey(),
+    user,
+    apply,
+    paid,
+    cert,
+    survey: surveyState,
+    progress,
+    homework,
+    quiz: quizState,
+    guideSeen,
+    name: user && user.name,
+    at: Date.now(),
+  };
+}
+
 async function post(path, body) {
-  if (!api) return;
+  if (!hasBackend()) return null;
   try {
-    await fetch(api + path, {
+    const res = await fetch(api + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body || {}),
     });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "";
+    return ct.includes("application/json") ? res.json() : null;
   } catch {
-    /* офлайн ок */
+    return null;
   }
+}
+
+async function getJson(path) {
+  if (!hasBackend()) return null;
+  try {
+    const res = await fetch(api + path);
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "";
+    return ct.includes("application/json") ? res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function syncProfile() {
+  if (!hasBackend() || !userKey()) return;
+  await post("/api/profile", profilePayload());
+}
+
+function applyProfile(p) {
+  if (!p || typeof p !== "object") return;
+  if (p.user && p.user.name) {
+    user = { ...user, ...p.user, id: userKey() || p.user.id };
+    save(LS.user, user);
+  }
+  if (p.cert && typeof p.cert === "object") {
+    if (p.cert.saved || !cert.saved) {
+      cert = { ...cert, ...p.cert };
+      save(LS.cert, cert);
+    }
+  }
+  if (p.survey && typeof p.survey === "object") {
+    const next = { ...surveyState };
+    Object.entries(p.survey).forEach(([id, draft]) => {
+      const local = next[id];
+      const serverDone = Boolean(draft && (draft.submitted || draft.review));
+      const localDone = Boolean(local && (local.submitted || local.review));
+      if (!local || (serverDone && !localDone)) next[id] = draft;
+    });
+    surveyState = next;
+    save(LS.survey, surveyState);
+  }
+  if (p.progress && typeof p.progress === "object") {
+    const merged = { ...p.progress, ...progress };
+    Object.keys({ ...p.progress, ...progress }).forEach((k) => {
+      if (p.progress[k] || progress[k]) merged[k] = true;
+    });
+    progress = merged;
+    save(LS.progress, progress);
+  }
+  if (p.homework && typeof p.homework === "object") {
+    homework = { ...p.homework, ...homework };
+    save(LS.hw, homework);
+  }
+  if (p.quiz && typeof p.quiz === "object") {
+    quizState = { ...p.quiz, ...quizState };
+    save(LS.quiz, quizState);
+  }
+  if (p.apply && typeof p.apply === "object") {
+    apply = { ...apply, ...p.apply };
+    save(LS.apply, apply);
+  }
+}
+
+async function hydrateProfile() {
+  if (!hasBackend() || !userKey()) return;
+  const data = await getJson("/api/profile?userId=" + encodeURIComponent(userKey()));
+  if (data && data.profile) applyProfile(data.profile);
 }
 
 async function reviewHomework(lessonId, text) {
@@ -2197,10 +2397,13 @@ function bindCookie() {
 
 if (course && $app) {
   window.addEventListener("hashchange", route);
-  route();
   bindCookie();
   bindPwa();
   bindRailHide();
+  (async () => {
+    if (user) await hydrateProfile();
+    route();
+  })();
 } else if ($app) {
   $app.innerHTML = `<div class="flow"><div class="flow-main"><p class="eye">Кабинет</p><h1>Файлы курса не загрузились</h1><p class="lead">Обновите страницу с главной ссылки сайта. Демо работает без сервера, в браузере.</p></div></div>`;
   bindCookie();

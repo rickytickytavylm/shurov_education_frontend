@@ -2469,6 +2469,20 @@ body.pwa-open { overflow: hidden; }
 }
 
 /* Guide «Как всё устроено», library, final verdict */
+.guide-feat {
+  display: grid;
+  gap: 20px;
+  margin: 28px 0 48px;
+  align-items: start;
+}
+.guide-feat .guide-shot { margin: 0; }
+.guide-feat h3 { margin: 6px 0 10px; }
+.guide-feat .lede { margin: 0 0 12px; }
+.guide-feat .guide-facts { margin: 8px 0 16px; grid-template-columns: 1fr; }
+.guide-feat .row { margin-top: 4px; }
+#introSurveyBox { scroll-margin-top: calc(108px + env(safe-area-inset-top)); }
+#introSurveyBox .survey-form { max-width: none; }
+#introSurveyBox .survey-block { background: #fff; }
 .guide-facts { display: grid; gap: 12px; margin: 18px 0 26px; }
 .guide-facts > div { padding: 18px 20px; background: #f7f4ee; border-radius: 14px; }
 .guide-facts b { display: block; margin-bottom: 6px; color: var(--ink); }
@@ -2534,4 +2548,12 @@ body.pwa-open { overflow: hidden; }
 @media (min-width: 721px) {
   .guide-facts { grid-template-columns: 1fr 1fr; }
   .guide-team { grid-template-columns: 1fr 1fr; }
+  .guide-feat {
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 36px;
+    align-items: center;
+  }
+  .guide-feat.is-rev .guide-shot { order: 2; }
+  .guide-feat.is-rev > div { order: 1; }
+  .guide-feat .guide-facts { grid-template-columns: 1fr; }
 }

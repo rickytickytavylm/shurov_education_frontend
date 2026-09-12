@@ -1,10 +1,10 @@
-const CACHE = "se-cabinet-v18";
+const CACHE = "se-cabinet-v20";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=45",
-  "app.js?v=40",
-  "course.js?v=10",
+  "styles.css?v=46",
+  "app.js?v=42",
+  "course.js?v=11",
   "config.js?v=3",
   "manifest.webmanifest",
   "assets/hero-4k.webp",
@@ -12,6 +12,9 @@ const CORE = [
   "assets/free-module.webp",
   "assets/free-module-mobile.webp",
   "assets/shurov.webp",
+  "assets/guide-path.webp",
+  "assets/guide-kira.webp",
+  "assets/guide-maps.webp",
   "assets/pwa-192.png",
   "assets/pwa-512.png",
   "assets/apple-touch-icon.png",
