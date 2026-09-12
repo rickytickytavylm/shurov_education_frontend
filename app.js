@@ -8,6 +8,8 @@ const LS = {
   tools: "se_tools",
   quiz: "se_quiz",
   survey: "se_survey",
+  cert: "se_cert",
+  guide: "se_guide",
 };
 
 const api = "";
@@ -42,12 +44,14 @@ let progress = load(LS.progress, {});
 let homework = load(LS.hw, {});
 let quizState = load(LS.quiz, {});
 let surveyState = load(LS.survey, {});
+let cert = load(LS.cert, {});
+let guideSeen = Boolean(load(LS.guide, false));
 let kira = load(LS.kira, [
   {
     id: "k0",
     name: "Кира AI",
     me: false,
-    text: "Здравствуйте. Я Кира AI, персональный AI-тьютор программы и клинический ассистент по вопросам созависимости. Опираюсь на материалы лекций доктора Шурова, 14 системных схем и диагностические инструменты курса. Помогу разобрать практические задания, осмыслить личный эпизод и сформулировать устойчивую границу без чувства вины. В острых кризисных ситуациях: 112 и очная медицинская помощь.",
+    text: "Здравствуйте. Я Кира AI — помощник курса. Опираюсь на лекции доктора Шурова, 14 схем и рабочие листы. Помогу разобрать задание, личный эпизод и сформулировать границу без самообвинения. В острых кризисных ситуациях: 112 и очная медицинская помощь.",
   },
 ]);
 let toolState = load(LS.tools, {
@@ -141,6 +145,7 @@ function stepLabel(module, lesson) {
   const list = lessonsOf(module);
   const n = list.findIndex((l) => l.id === lesson.id) + 1;
   const total = list.length;
+  if (module.final) return "Итоговый тест";
   if (module.free) return `Вводный практикум · шаг ${n} из ${total}`;
   return `Модуль ${module.n} · шаг ${n} из ${total}`;
 }
@@ -261,7 +266,7 @@ function route() {
   if (path === "lesson" && id) {
     currentId = id;
     view = user ? "lesson" : nextPublic();
-  } else if (path === "kira" || path === "atlas" || path === "tools") {
+  } else if (path === "kira" || path === "atlas" || path === "tools" || path === "guide" || path === "library") {
     view = user ? path : nextPublic();
   } else if (path === "login") {
     view = user ? "lesson" : "login";
@@ -311,6 +316,17 @@ function render() {
     bindPay();
     return;
   }
+  if (view === "guide") {
+    $app.innerHTML = shellHtml(guideHtml());
+    bindShell();
+    bindGuide();
+    return;
+  }
+  if (view === "library") {
+    $app.innerHTML = shellHtml(libraryHtml());
+    bindShell();
+    return;
+  }
   if (view === "kira") {
     $app.innerHTML = shellHtml(kiraHtml());
     bindShell();
@@ -343,7 +359,7 @@ function startHtml() {
           <h3>${esc(m.title)}</h3>
           <p>${esc(m.blurb)}</p>
         </div>
-        <span class="module-time">${m.free ? "бесплатно" : "вебинар " + m.n}</span>
+        <span class="module-time">${m.free ? "бесплатно" : m.final ? "тест" : "вебинар " + m.n}</span>
       </li>`
     )
     .join("");
@@ -375,7 +391,7 @@ function startHtml() {
             ${heroCta}
           </div>
           <div class="hero-west">
-            <p>Клиническая программа по созависимости: бесплатный практикум, четыре модуля и Кира AI.</p>
+            <p>Программа по созависимости: бесплатный практикум, четыре модуля и Кира AI.</p>
             <div class="chips">
               <a href="#free">Бесплатный практикум</a>
               <a href="#app-install">Веб-приложение</a>
@@ -389,9 +405,9 @@ function startHtml() {
 
       <section class="strip" id="how">
         <div class="inner">
-          <p><b>Кира AI</b><span>Персональный AI-тьютор и разбор заданий</span></p>
-          <p><b>Вводный практикум</b><span>Клиническая рамка, анализ дня и анкета</span></p>
-          <p><b>4 модуля программы</b><span>Академические лекции, тестирование и навыки</span></p>
+          <p><b>Кира AI</b><span>Персональный AI-помощник и разбор заданий</span></p>
+          <p><b>Вводный практикум</b><span>Понятие созависимости, разбор одного дня и анкета</span></p>
+          <p><b>4 модуля программы</b><span>Лекции, практика и проверки</span></p>
         </div>
       </section>
 
@@ -403,12 +419,12 @@ function startHtml() {
         <div class="free-mod-shade"></div>
         <div class="free-mod-copy">
           <p class="kicker">Вводный практикум · около 40 минут</p>
-          <h2>Анатомия созависимости: как устроена система</h2>
-          <p class="free-mod-lead">Фундаментальный блок до перехода к основной программе: рабочая психотерапевтическая рамка без бытовых ярлыков, исследование одного дня вашей жизни, диагностическая анкета и тестирование с подробным разбором от Киры AI.</p>
+          <h2>Понятие созависимости</h2>
+          <p class="free-mod-lead">Бесплатный вводный блок до основной программы: что мы называем созависимостью, как это выглядит в обычный вечер, анкета запроса и короткая проверка с разбором от Киры AI.</p>
           <ul class="free-mod-list">
-            <li>Что клиническая практика понимает под созависимостью: способ регуляции, а не дефект характера</li>
-            <li>Как обнаружить системный сценарий в одном конкретном вечере, минуя абстрактную вину</li>
-            <li>Контрольное тестирование и глубокая анкета запроса перед четырьмя модулями курса</li>
+            <li>Что такое созависимость простыми словами: привычка, а не дефект характера</li>
+            <li>Как увидеть сценарий отношений в одном конкретном вечере, без самообвинения</li>
+            <li>Короткая проверка и анкета запроса перед четырьмя модулями курса</li>
           </ul>
           <button class="btn light" type="button" id="${user ? "toCourse" : "toFree"}">Войти в кабинет</button>
         </div>
@@ -418,7 +434,7 @@ function startHtml() {
         <div class="inner">
           <div class="program-head">
             <div><p class="kicker">Учебный план</p><h2>Вводный модуль и четыре ступени курса</h2></div>
-            <p>После входа по имени открываются сразу все материалы: вводный практикум, четыре модуля, тесты, анкеты и Кира AI.</p>
+            <p>После входа по личному ключу открываются все материалы: вводный практикум, четыре модуля, итоговый тест, анкеты и Кира AI.</p>
           </div>
           <ol class="mods">${mods}</ol>
         </div>
@@ -536,7 +552,7 @@ function payHtml() {
       <div class="flow-main">
         <p class="eye">Полный доступ к программе</p>
         <h1>Активация четырех модулей</h1>
-        <p class="lead">Вводный практикум открыт бесплатно и без ограничений. Активация открывает четыре фундаментальных модуля программы, практические инструменты и атлас системных схем отношений. Модули осваиваются последовательно, шаг за шагом.</p>
+        <p class="lead">Вводный практикум открыт бесплатно. Активация открывает четыре модуля программы, практические инструменты и 14 схем отношений. Модули проходятся по порядку, шаг за шагом.</p>
         <ul class="pay-points">
           <li>${esc(name)}</li>
           <li>${esc(email)}</li>
@@ -562,7 +578,7 @@ function shellHtml(inner) {
         })
         .join("");
       return `<div class="nav-mod${openMod ? "" : " is-lock"}${moduleComplete(m) ? " is-done" : ""}${m.free ? " is-free" : ""}">
-        <div class="n">${m.free ? "вводный практикум · бесплатно" : "модуль " + m.n}</div>
+        <div class="n">${m.free ? "вводный практикум · бесплатно" : m.final ? "финал · сертификат" : "модуль " + m.n}</div>
         <div class="t">${esc(m.title)}</div>
         <div class="lessons">${items}</div>
       </div>`;
@@ -576,7 +592,7 @@ function shellHtml(inner) {
       const on = view === "lesson" && here.module.id === m.id ? " on" : "";
       const done = moduleComplete(m) ? " is-done" : "";
       const lock = canOpenModule(m) ? "" : " is-lock";
-      return `<a class="${on}${done}${lock}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный практикум" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
+      return `<a class="${on}${done}${lock}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный практикум" : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
     })
     .join("");
   const steps = lessonsOf(here.module)
@@ -594,9 +610,11 @@ function shellHtml(inner) {
         <a class="brand light" href="#/lesson/${esc(currentId)}">${brandHtml()}</a>
         <div class="top-titles"><span>Курс</span>${esc(course.title)}</div>
         <nav class="top-studio">
+          <a href="#/guide" class="${view === "guide" ? "on" : ""}">Как всё устроено</a>
           <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира AI</a>
-          <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">Как это устроено</a>
+          <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">14 схем</a>
           <a href="#/tools" class="${view === "tools" ? "on" : ""}">Инструменты</a>
+          <a href="#/library" class="${view === "library" ? "on" : ""}">Литература</a>
         </nav>
         ${isStandalone() ? `<span class="pwa-badge light">приложение</span>` : `<button class="text-link light" type="button" data-pwa-open>на телефон</button>`}
         <button class="text-link light" type="button" id="logout">выйти</button>
@@ -617,9 +635,11 @@ function shellHtml(inner) {
             ${pwaOpenBtn("Установить", "btn")}
           </div>
           <div class="studio">
+            <a href="#/guide" class="${view === "guide" ? "on" : ""}">Как всё устроено</a>
             <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира AI</a>
-            <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">Как это устроено</a>
+            <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">14 схем</a>
             <a href="#/tools" class="${view === "tools" ? "on" : ""}">Инструменты</a>
+            <a href="#/library" class="${view === "library" ? "on" : ""}">Литература</a>
           </div>
           <div class="portrait">
             <img src="${esc(asset(doc.photo || "assets/shurov.webp"))}" alt="${esc(doc.name || "")}" />
@@ -629,9 +649,10 @@ function shellHtml(inner) {
         <main class="main">${inner}</main>
       </div>
       <nav class="app-dock" aria-label="Разделы кабинета">
+        <a href="#/guide" class="${view === "guide" ? "on" : ""}">старт</a>
         <a href="#/lesson/${esc(currentId)}" class="${view === "lesson" ? "on" : ""}">уроки</a>
         <a href="#/kira" class="${view === "kira" ? "on" : ""}">кира ai</a>
-        <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">разбор</a>
+        <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">схемы</a>
       </nav>
     </div>`;
 }
@@ -681,17 +702,17 @@ function nextCta(module, lesson) {
 function lockedHtml(reason, module, lesson) {
   const prev = course.modules[course.modules.findIndex((m) => m.id === module.id) - 1];
   let title = "Материал заблокирован";
-  let text = "Для сохранения терапевтического эффекта обучение проходит строго последовательно: лекция, практическое задание, тестирование.";
+  let text = "Материалы открываются по порядку: конспект, практическое задание, проверка.";
   let action = "";
   if (reason === "need-pay") {
     title = "Доступ к основному блоку программы";
-    text = "Вводный практикум доступен бесплатно. Четыре модуля фундаментального курса открываются после активации доступа и завершения вводного блока.";
+    text = "Вводный практикум открыт бесплатно. Четыре модуля курса открываются после активации доступа и завершения вводного блока.";
     action = `<a class="btn" href="#/pay">активировать доступ</a>
       <a class="btn ghost" href="#/lesson/${esc(continueLessonId())}">вернуться к текущему шагу</a>`;
   } else if (reason === "need-prev-module") {
     title = "Модуль пока недоступен";
     text = prev
-      ? `Для перехода к этой теме необходимо завершить все шаги предыдущего модуля «${prev.title}»: лекционный конспект, практическое задание и контрольное тестирование.`
+      ? `Для перехода к этой теме завершите все шаги предыдущего модуля «${prev.title}»: конспект, практическое задание и проверку.`
       : "Сначала завершите предыдущий модуль программы.";
     const jump = prev ? firstIncompleteIn(prev) : continueLessonId();
     action = `<a class="btn" href="#/lesson/${esc(jump)}">перейти к незавершенному шагу</a>`;
@@ -735,8 +756,8 @@ function lectureHtml(module, lesson) {
       <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)}</span></div>
     </div>`}
     <section class="section">
-      <div class="section-label">${module.free ? "Клинический практикум" : "Академический конспект"}</div>
-      <h3>${module.free ? "Концепция и теоретическая рамка" : "Клиническая рамка встречи"}</h3>
+      <div class="section-label">${module.free ? "Вводный практикум" : "Конспект"}</div>
+      <h3>О чём этот урок</h3>
       <div class="lecture">${lectureBlocks(lesson.lecture)}</div>
     </section>
     <section class="section">
@@ -751,7 +772,7 @@ function lectureHtml(module, lesson) {
           <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить на разбор"}</button>
           ${nextCta(module, lesson)}
         </div>
-        ${reviewCard(hw.review, "Клинический разбор Киры AI")}
+        ${reviewCard(hw.review, "Разбор Киры AI")}
       </div>
     </section>`;
 }
@@ -759,7 +780,8 @@ function lectureHtml(module, lesson) {
 function quizHtml(module, lesson) {
   const items = lesson.quiz || [];
   const state = quizState[lesson.id] || { picks: {} };
-  const done = Boolean(state.review);
+  const done = state.score != null || Boolean(state.review);
+  const isFinal = Boolean(lesson.final);
   const body = items
     .map((q, i) => {
       const pick = state.picks[q.id];
@@ -774,27 +796,47 @@ function quizHtml(module, lesson) {
         <p class="quiz-n">Вопрос ${i + 1} из ${items.length}</p>
         <h4>${esc(q.q)}</h4>
         <div class="choices">${opts}</div>
-        ${done ? `<p class="quiz-why">${esc(q.why)}</p>` : ""}
+        ${done && q.why ? `<p class="quiz-why">${esc(q.why)}</p>` : ""}
       </article>`;
     })
     .join("");
   const score = done ? `<p class="quiz-score">Результат: ${state.score} из ${state.total} правильных ответов</p>` : "";
+  const verdict = done && isFinal ? finalVerdictHtml(state.score, lesson.passAt || 15) : "";
   return `
     ${lessonHead(module, lesson)}
     <section class="section">
-      <div class="section-label">Контроль усвоения</div>
-      <h3>Тестирование по материалу модуля</h3>
-      <p class="lede">Отметьте верные утверждения в каждом вопросе. После завершения Кира AI предоставит развернутый клинический комментарий к вашим ответам.</p>
+      <div class="section-label">${isFinal ? "Итоговое тестирование" : "Проверка"}</div>
+      <h3>${isFinal ? "Итоговый тест" : "Проверка по теме"}</h3>
+      <p class="lede">${isFinal
+        ? "Вы дошли до финала. Курс «Любить, не теряя себя» завершён. Остался последний шаг — итоговый тест. В тесте 20 вопросов, к каждому — три варианта ответа. Нужно выбрать один верный. Для успешного прохождения нужно набрать 75% (15 из 20). Это не проверка ради оценки, а возможность ещё раз пройти по ключевым темам: слияние, спасательство, границы, возвращение опоры на себя. Результат появится сразу после завершения."
+        : "Выберите один ответ в каждом вопросе. После отправки Кира AI разберёт ваши ответы. Это не экзамен, а способ проверить, как усвоен материал."}</p>
       ${score}
+      ${verdict}
       <form id="quizForm" class="quiz-form">${body}
-        <p class="form-err" id="quizErr" hidden>Пожалуйста, дайте ответ на каждый вопрос тестирования.</p>
+        <p class="form-err" id="quizErr" hidden>Пожалуйста, ответьте на каждый вопрос.</p>
         <div class="row">
-          ${done ? `<button class="btn ghost" type="button" id="quizRetry">пройти тестирование заново</button>` : `<button class="btn" type="submit" id="quizSend">отправить на проверку Кире AI</button>`}
+          ${done ? `<button class="btn ghost" type="button" id="quizRetry">пройти ещё раз</button>` : `<button class="btn" type="submit" id="quizSend">${isFinal ? "завершить тест" : "отправить на проверку"}</button>`}
           ${nextCta(module, lesson)}
         </div>
-        ${reviewCard(state.review, "Анализ ответов от Киры AI")}
+        ${isFinal ? "" : reviewCard(state.review, "Разбор ответов Киры AI")}
       </form>
     </section>`;
+}
+
+function finalVerdictHtml(score, passAt) {
+  if (score >= passAt) {
+    return `<div class="final-verdict is-pass">
+      <h4>Вы успешно прошли тест</h4>
+      <p>Ваши ответы показывают, что вы хорошо ориентируетесь в механизмах слияния, спасательства и выстраивания границ. Это значит, что материал курса не просто был прослушан, а переработан и соотнесён с собственным опытом.</p>
+      <p>Вы видите разницу между созависимостью и любовью, понимаете, как возвращать ответственность взрослому близкому, и знаете, почему забота о себе — это не эгоизм, а основа устойчивости.</p>
+      <p>Эти знания — ваша опора. К ним можно возвращаться в трудные моменты, когда привычные сценарии снова начинают управлять поведением. Благодарим за участие в курсе.</p>
+    </div>`;
+  }
+  return `<div class="final-verdict">
+    <h4>Вы завершили тест</h4>
+    <p>Для успешного прохождения курса нужно набрать не менее ${passAt} правильных ответов. Ваш результат чуть ниже. Это не повод для разочарования, а возможность ещё раз вернуться к темам, которые вызвали затруднения. Обратите внимание на модули, где были допущены ошибки.</p>
+    <p>Изменения происходят постепенно. Возврат к материалу — это не шаг назад, а укрепление понимания. Попробуйте пройти тест ещё раз после повторения.</p>
+  </div>`;
 }
 
 function surveyFieldHtml(field, draft) {
@@ -850,16 +892,16 @@ function surveyHtml(module, lesson) {
   return `
     ${lessonHead(module, lesson)}
     <section class="section">
-      <div class="section-label">Диагностическая анкета</div>
+      <div class="section-label">Анкета</div>
       <h3>${esc(spec.title)}</h3>
       <p class="lede">${esc(spec.lead)}</p>
       <form id="surveyForm" class="survey-form">${blocks}
         <p class="form-err" id="surveyErr" hidden>Пожалуйста, заполните все пункты анкеты перед отправкой.</p>
         <div class="row">
-          ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить на анализ Кире AI</button>`}
+          ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить</button>`}
           ${nextCta(module, lesson)}
         </div>
-        ${reviewCard(draft.review, "Аналитический разбор Киры AI")}
+        ${reviewCard(draft.review, "Разбор Киры AI")}
       </form>
     </section>`;
 }
@@ -876,6 +918,161 @@ function lectureBlocks(lecture) {
     .join("");
 }
 
+function guideHtml() {
+  const consent = cert.consent || "";
+  return `
+    <p class="crumb">Начало · перед первым уроком</p>
+    <h2>Как всё устроено</h2>
+    <p class="lede">Мы рады видеть вас на курсе! Несколько важных моментов перед началом.</p>
+
+    <section class="section">
+      <div class="section-label">Приветствие эксперта</div>
+      <h3>Короткое видео от Василия Шурова</h3>
+      <div class="video" role="img" aria-label="Видео-приветствие эксперта">
+        <div class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.8v10.4L18 12 9 6.8z"/></svg></div>
+        <div class="video-meta"><p>Приветствие эксперта</p><span>запись скоро появится</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-label">Ваши данные и конфиденциальность</div>
+      <h3>Несколько важных моментов</h3>
+      <div class="guide-facts">
+        <div><b>О школе</b><p>Онлайн-школа работает на основании действующей лицензии №1035-01255-50/01675078 от 27.12.2024, выданной Министерством образования Московской области. Это значит, что обучение официальное, а материалы соответствуют стандартам.</p></div>
+        <div><b>О ваших данных</b><p>Мы бережно относимся к вашей информации и соблюдаем конфиденциальность. Данные используются только для организации обучения.</p></div>
+        <div><b>О налоговом вычете</b><p>В конце года вы сможете воспользоваться правом на налоговый вычет за пройденное обучение — в соответствии с Налоговым кодексом РФ.</p></div>
+      </div>
+      <div class="tool-box cert-box">
+        <h4>Что нужно сделать сейчас</h4>
+        <p class="cert-lead">Выберите один из вариантов. Это обязательно для всех, даже если сертификат вам не нужен.</p>
+        <div class="choices">
+          <button type="button" class="choice${consent === "yes" ? " on" : ""}" data-cert="yes"><strong>Согласие</strong><span>Хочу получить сертификат</span></button>
+          <button type="button" class="choice${consent === "no" ? " on" : ""}" data-cert="no"><strong>Отказ</strong><span>Сертификат не требуется</span></button>
+        </div>
+        <form id="certForm" class="cert-form">
+          <label>ФИО*<input name="fio" type="text" autocomplete="name" value="${esc(cert.fio || "")}" placeholder="Фамилия, имя, отчество" /></label>
+          <label>Серия и номер паспорта*<input name="passport" type="text" inputmode="numeric" value="${esc(cert.passport || "")}" placeholder="0000 000000" /></label>
+          <label>Кем и когда выдан паспорт*<input name="issued" type="text" value="${esc(cert.issued || "")}" placeholder="Орган выдачи и дата" /></label>
+          <label>Код подразделения*<input name="code" type="text" inputmode="numeric" value="${esc(cert.code || "")}" placeholder="000-000" /></label>
+          <label>Адрес регистрации*<input name="address" type="text" value="${esc(cert.address || "")}" placeholder="Город, улица, дом, квартира" /></label>
+          <p class="fine">Если сертификат не нужен, в полях можно поставить прочерк. Заполнение формы обязательно для получения сертификата.</p>
+          <div class="row">
+            <button class="btn" type="submit">сохранить</button>
+            ${cert.saved ? `<span class="cert-saved">данные сохранены</span>` : ""}
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-label">Как устроен курс</div>
+      <h3>Курс построен как путь</h3>
+      <p class="lede">От понимания, как устроено слияние, — к возвращению опоры на себя. Доступ к материалам курса — 3 месяца.</p>
+      <ul class="guide-list">
+        <li>4 видеолекции с Василием Александровичем Шуровым</li>
+        <li>Бонус от команды курса — вводный практикум</li>
+        <li>4 фокус-группы с психологами</li>
+        <li>2 индивидуальные консультации с психологом</li>
+        <li>Практические задания после каждой темы</li>
+        <li>Итоговый тест после всех тем. Сертификат при результате 75% и выше</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <div class="section-label">Команда поддержки</div>
+      <h3>На протяжении курса рядом будут психологи, куратор и ИИ-ассистент</h3>
+      <div class="guide-team">
+        <div><b>Пикулева Екатерина Всеволодовна</b><span>психолог · +7 916 704-49-85 · @KateZhar</span></div>
+        <div><b>Родин Алексей Эрикович</b><span>психолог · +7 916 191-32-44 · @Rodin_Alexey</span></div>
+        <div><b>Голованова Екатерина Сергеевна</b><span>психолог · +7 968 040-50-05 · @katenka86</span></div>
+        <div><b>Дегтярева Ирина Васильевна</b><span>куратор · @Irina_Err</span></div>
+        <div><b>Кира AI</b><span>ИИ-ассистент, который всегда рядом. Поможет разобраться в теме, разобрать личный эпизод и найти опору. Работает на основе программы доктора Шурова.</span></div>
+      </div>
+      <p class="lede">Практические фокус-группы проходят в Zoom. Ссылка придёт в чат потока. Проходят без записи.</p>
+    </section>
+
+    <section class="section">
+      <div class="section-label">Общение</div>
+      <h3>Чат потока и каналы связи</h3>
+      <ul class="guide-list">
+        <li>Чат потока — для вопросов куратору.</li>
+        <li>Telegram-канал: <a href="https://t.me/shurovsos" target="_blank" rel="noopener">t.me/shurovsos</a></li>
+        <li>Бот в Telegram для напоминаний и поддержки: <a href="https://tvoi-shag.online/tlgrm?bot=getcourse_shurov_bot" target="_blank" rel="noopener">открыть</a></li>
+        <li>Бот в MAX: <a href="https://tvoi-shag.online/pl/maxstart?botId=794" target="_blank" rel="noopener">открыть</a></li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <div class="section-label">Навигация по платформе</div>
+      <h3>Как пользоваться кабинетом</h3>
+      <div class="guide-facts">
+        <div><b>Как войти</b><p>Вход по личному ключу, который вы получили от команды курса. Если ключ не подходит — напишите куратору в чат потока.</p></div>
+        <div><b>Модули</b><p>Материалы разбиты на модули. В каждом: видеолекция, конспект, практическое задание и проверка из четырёх вопросов — её разбирает Кира AI. Это не экзамен, а возможность проверить, как усвоен материал.</p></div>
+        <div><b>Анкеты</b><p>Анкеты обратной связи помогают нам становиться лучше для вас.</p></div>
+        <div><b>Итоговый тест</b><p>После всех тем — итоговый тест. Возможность закрепить пройденное и получить сертификат при результате 75% и выше.</p></div>
+        <div><b>Литература</b><p>Материалы по теме созависимости: научная основа программы и то, что можно почитать дополнительно.</p></div>
+        <div><b>14 схем</b><p>Раздел, в котором собраны 14 схем, по которым живут созависимые отношения. Каждая схема разобрана одинаково: что это простыми словами, как выглядит в жизни, почему держится и что с этим делает курс. Это учебный материал, не диагностика.</p></div>
+        <div><b>Инструменты</b><p>Рабочие листы рядом с лекциями. Можно заполнять прямо на платформе, без отдельной тетради.</p></div>
+        <div><b>Веб-приложение</b><p>Позволяет пользоваться платформой как обычным приложением на телефоне: быстро открывать уроки, задания и инструменты.</p></div>
+      </div>
+      <div class="row"><a class="btn" href="#/lesson/${esc(continueLessonId())}">перейти к урокам</a></div>
+    </section>`;
+}
+
+function bindGuide() {
+  guideSeen = true;
+  save(LS.guide, true);
+  document.querySelectorAll("[data-cert]").forEach((btn) => {
+    btn.onclick = () => {
+      cert.consent = btn.dataset.cert;
+      save(LS.cert, cert);
+      render();
+    };
+  });
+  const form = document.getElementById("certForm");
+  if (form) {
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      cert.fio = String(fd.get("fio") || "").trim();
+      cert.passport = String(fd.get("passport") || "").trim();
+      cert.issued = String(fd.get("issued") || "").trim();
+      cert.code = String(fd.get("code") || "").trim();
+      cert.address = String(fd.get("address") || "").trim();
+      cert.saved = true;
+      save(LS.cert, cert);
+      render();
+    };
+  }
+}
+
+function libraryHtml() {
+  const blocks = (course.library || [])
+    .map(
+      (sec) => `<section class="section">
+        <div class="section-label">Литература</div>
+        <h3>${esc(sec.title)}</h3>
+        <p class="lede">${esc(sec.note)}</p>
+        <div class="lib-list">
+          ${sec.items
+            .map(
+              (it) => `<div class="lib-item">
+                <p>${esc(it.text)}</p>
+                ${it.url ? `<a class="text-link" href="${esc(it.url)}" target="_blank" rel="noopener">открыть источник</a>` : ""}
+              </div>`
+            )
+            .join("")}
+        </div>
+      </section>`
+    )
+    .join("");
+  return `
+    <p class="crumb">Материалы · чтение</p>
+    <h2>Литература</h2>
+    <p class="lede">Материалы по теме созависимости: научная основа программы и то, что можно почитать дополнительно.</p>
+    ${blocks}`;
+}
+
 function kiraHtml() {
   const msgs = kira
     .map(
@@ -888,7 +1085,7 @@ function kiraHtml() {
   return `
     <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
     <h2>Кира AI</h2>
-    <p class="lede">Персональный AI-тьютор курса и клинический консультант по вопросам созависимости. Опирается на академическую программу доктора Шурова, 14 системных схем и диагностические инструменты. Помогает перевести теорию в практику, разобрать личный эпизод и сформулировать границы без самообвинения.</p>
+    <p class="lede">AI-помощник курса. Опирается на программу доктора Шурова, 14 схем и рабочие листы. Поможет разобраться в теме, разобрать личный эпизод и найти опору — без самообвинения.</p>
     <div class="kira-pills">
       <button type="button" data-q="Что в клинической рамке курса называется созависимостью?">Определение созависимости</button>
       <button type="button" data-q="Где точная граница между заботой и спасательством?">Забота vs спасательство</button>
@@ -1137,7 +1334,7 @@ function bindLogin() {
     paid = true;
     save(LS.paid, true);
     await post("/auth/login", user);
-    go("/lesson/" + continueLessonId());
+    go(guideSeen ? "/lesson/" + continueLessonId() : "/guide");
   };
 }
 
@@ -1184,7 +1381,7 @@ function bindApply() {
     paid = true;
     save(LS.paid, true);
     await post("/apply", { user, apply });
-    go("/lesson/m0-l1");
+    go("/guide");
   };
 }
 
@@ -1318,7 +1515,7 @@ function bindQuiz(lesson) {
       send.disabled = true;
       send.textContent = "проверяет…";
     }
-    const review = await reviewQuiz(lesson, picks);
+    const review = lesson.final ? null : await reviewQuiz(lesson, picks);
     let score = 0;
     items.forEach((q) => {
       if (picks[q.id] === q.answer) score += 1;
@@ -1517,23 +1714,23 @@ function localKiraReply(text) {
     return "Приоритет: физическая безопасность. Если есть прямая угроза жизни, здоровью или насилие: незамедлительно обращайтесь в экстренные службы 112 и за очной медицинской помощью. Образовательный процесс возобновляется только после обеспечения безопасной среды.";
   }
   if (/созавис|слиян|раствор/i.test(q)) {
-    return here + " В клинической рамке курса созависимость рассматривается не как житейский дефект, а как системная делегированная регуляция: способность управлять своим состоянием отдана партнеру. Его интонация, трезвость или молчание определяют ваш день. Психотерапевтическая задача: вернуть собственный суверенный контур. Это тема вводного практикума и модуля 1. Рекомендую изучить схему «Слияние, контакт, обрыв» в разделе «Как это устроено».";
+    return here + " Созависимость в этом курсе — не «слишком сильная любовь», а устойчивая привычка, при которой ваше состояние регулирует другой человек: его интонация, трезвость или молчание определяют ваш день. Задача курса — вернуть опору на себя. Это тема вводного практикума и модуля 1. Рекомендую посмотреть схему «Слияние, контакт, обрыв» в разделе «14 схем».";
   }
   if (/карпман|треугольник/i.test(q)) {
-    return here + " Треугольник Карпмана описывает динамическую смену ролей: спасатель, жертва, преследователь. Каждая роль дает краткосрочное снятие тревоги, но закрепляет асимметрию. Выход лежит в плоскости взрослого контакта: прямая коммуникация, уязвимость без беспомощности и забота по обоюдному согласию. Детальный разбор представлен в разделе «Как это устроено» (схема 01).";
+    return here + " Треугольник Карпмана — это три роли, по которым люди ходят вместо разговора: спасатель, жертва, преследователь. Каждая роль на минуту снимает тревогу, но закрепляет неравенство. Выход — во взрослом контакте: прямой разговор, уязвимость без беспомощности и забота по обоюдному согласию. Подробный разбор — в разделе «14 схем» (схема 01).";
   }
   if (/спасательств|enable|выпил|алкогол/i.test(q)) {
-    return here + " Спасательство блокирует встречу взрослого человека с последствиями его собственных выборов. Забота оставляет за другим автономию и ответственность. Программа курса не ставит целью переделать зависимого через ваше поведение. Контрольные вопросы перед любым вмешательством: просил ли он? способен ли справиться сам? что останется в его зоне ответственности после моей помощи? Подробнее в модуле 2 и инструменте «Чья это работа».";
+    return here + " Спасательство забирает у взрослого человека встречу с последствиями его выборов. Забота оставляет за другим его взрослость и ответственность. Курс не ставит целью переделать зависимого через ваше поведение. Три вопроса перед любой помощью: он просил? Он может сам? Что останется ему после моей помощи? Подробнее — в модуле 2 и инструменте «Чья это работа».";
   }
   if (/винова|разочаров|сказать нет|границ/i.test(q)) {
-    return here + " Право разочаровать: психологическая способность сохранить собственную позицию и переносимость чужого аффекта (обиды, раздражения, молчания). Границы разрушаются не от чужого давления, а от внутреннего соматического чувства вины. Первичный навык: выдержать паузу после произнесения правды, не пытаясь немедленно компенсировать дискомфорт партнера. Это фокус модуля 3.";
+    return here + " Право разочаровать — это способность сохранить свою позицию, пока другой злится, обижается или молчит. Границы ломает не чужое давление, а вина, которая поднимается раньше слов. Первичный навык: выдержать паузу после правды и не бросаться сразу чинить чувство другого. Это фокус модуля 3.";
   }
   if (/домашк|задани|практик|провери|разбор/i.test(q)) {
-    return here + " Для клинического анализа практического задания сформулируйте конкретный факт: дата/время, контекст ситуации, произнесенные слова или совершенное действие. Нажмите кнопку «отправить на разбор Кире AI» в блоке урока: я проанализирую структуру ответа и помогу отделить факты от автоматического самообвинения.";
+    return here + " Для разбора практического задания сформулируйте конкретный факт: дата и время, контекст, сказанные слова или действие. Нажмите «отправить на разбор» в блоке урока: я разберу структуру ответа и помогу отделить факты от самообвинения.";
   }
   return (
     here +
-    " Демо-ответ Киры AI на ваш запрос. В живом запуске здесь будет персональный разбор. По рамке курса: созависимость — это делегированная регуляция, а не «слишком сильная любовь». Смотрите факт (что было сказано и сделано), отделяйте свою ответственность от чужой и не чините состояние другого взрослого сразу. Можете прислать ещё один вопрос или конкретную сцену — учебный разбор придёт на любой запрос."
+    " Демо-ответ Киры AI на ваш запрос. В живом запуске здесь будет персональный разбор. По рамке курса: созависимость — это не «слишком сильная любовь», а привычка жить состоянием другого. Смотрите на факт (что было сказано и сделано), отделяйте свою ответственность от чужой и не чините состояние другого взрослого сразу. Можете прислать ещё один вопрос или конкретную сцену — учебный разбор придёт на любой запрос."
   );
 }
 

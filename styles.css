@@ -2307,3 +2307,44 @@ body.pwa-open { overflow: hidden; }
   .pwa-sheet { padding: 18px 16px 24px; }
   .pwa-side { display: none; }
 }
+
+/* Guide «Как всё устроено», library, final verdict */
+.guide-facts { display: grid; gap: 12px; margin: 18px 0 26px; }
+.guide-facts > div { padding: 18px 20px; background: #f7f4ee; border-radius: 14px; }
+.guide-facts b { display: block; margin-bottom: 6px; color: var(--ink); }
+.guide-facts p { margin: 0; color: var(--mute); font-size: 15px; }
+.guide-list { margin: 14px 0 0; padding-left: 20px; color: var(--ink); }
+.guide-list li { margin-bottom: 8px; }
+.guide-list a { color: var(--violet-dark); }
+.guide-team { display: grid; gap: 12px; margin: 18px 0 22px; }
+.guide-team > div { padding: 16px 18px; background: #f7f4ee; border-radius: 14px; }
+.guide-team b { display: block; color: var(--ink); }
+.guide-team span { color: var(--mute); font-size: 14px; }
+.cert-box { margin-top: 8px; }
+.cert-box h4 { margin: 0 0 8px; color: var(--ink); }
+.cert-lead { margin: 0 0 16px; color: var(--mute); font-size: 15px; }
+.cert-form { display: grid; gap: 12px; margin-top: 18px; }
+.cert-form label { display: grid; gap: 6px; font-size: 14px; color: var(--mute); }
+.cert-form input {
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  color: var(--ink);
+}
+.cert-form input:focus { outline: 2px solid var(--aura); outline-offset: 1px; }
+.cert-saved { align-self: center; font-size: 13px; color: #5b7a4f; }
+.lib-list { display: grid; gap: 12px; }
+.lib-item { padding: 16px 18px; background: #f7f4ee; border-radius: 14px; }
+.lib-item p { margin: 0 0 6px; color: var(--ink); font-size: 15px; }
+.lib-item .text-link { font-size: 13px; }
+.final-verdict { margin: 20px 0; padding: 22px; border-radius: 14px; background: #f7f4ee; }
+.final-verdict h4 { margin: 0 0 10px; color: var(--ink); font-size: 19px; }
+.final-verdict p { margin: 0 0 10px; color: var(--mute); }
+.final-verdict p:last-child { margin-bottom: 0; }
+.final-verdict.is-pass { box-shadow: inset 0 0 0 1.5px #5b7a4f; }
+@media (min-width: 721px) {
+  .guide-facts { grid-template-columns: 1fr 1fr; }
+  .guide-team { grid-template-columns: 1fr 1fr; }
+}
