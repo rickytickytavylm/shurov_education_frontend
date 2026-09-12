@@ -412,6 +412,42 @@ function pendingHtml(text) {
   </div>`;
 }
 
+function cabinetScroller() {
+  if (!window.matchMedia("(max-width: 720px)").matches) return null;
+  return document.querySelector(".app .main");
+}
+
+function getScrollY() {
+  const root = cabinetScroller();
+  return root ? root.scrollTop : window.scrollY || 0;
+}
+
+function setScrollY(y, behavior) {
+  const root = cabinetScroller();
+  if (root) {
+    root.scrollTo({ top: y, left: 0, behavior: behavior || "auto" });
+    return;
+  }
+  window.scrollTo({ top: y, left: 0, behavior: behavior || "auto" });
+}
+
+function pinAppShell() {
+  const set = () => {
+    const vv = window.visualViewport;
+    const h = Math.round((vv && vv.height) || window.innerHeight || 0);
+    if (h) document.documentElement.style.setProperty("--app-h", h + "px");
+  };
+  set();
+  if (window.SE_VV_BOUND) return;
+  window.SE_VV_BOUND = true;
+  window.addEventListener("resize", set, { passive: true });
+  window.addEventListener("orientationchange", set);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", set);
+    window.visualViewport.addEventListener("scroll", set);
+  }
+}
+
 function revealReply(id) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -422,10 +458,10 @@ function revealReply(id) {
   const dockH = mobile && dock && getComputedStyle(dock).display !== "none" ? dock.getBoundingClientRect().height : 0;
   const viewH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   const rect = el.getBoundingClientRect();
-  const topLimit = headH + 12;
+  const topLimit = (mobile ? 12 : headH + 12);
   const botLimit = viewH - dockH - 12;
   if (rect.top >= topLimit && rect.bottom <= botLimit) return;
-  window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - topLimit), behavior: "smooth" });
+  setScrollY(Math.max(0, getScrollY() + rect.top - topLimit), "smooth");
 }
 
 function showPendingIn(slotId, text) {
@@ -455,9 +491,10 @@ function render(opts) {
   opts = opts || {};
   const keepScroll = Boolean(opts.keepScroll);
   const focus = opts.focus || "";
-  const y = keepScroll ? window.scrollY : 0;
+  const y = keepScroll ? getScrollY() : 0;
   document.body.classList.toggle("is-kira", view === "kira");
-  if (!keepScroll && view !== "start") window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  pinAppShell();
+  if (!keepScroll && view !== "start") setScrollY(0, "instant");
   if (view === "start") {
     $app.innerHTML = startHtml();
     bindStart();
@@ -490,7 +527,7 @@ function render(opts) {
     bindShell();
     bindLesson();
   }
-  if (keepScroll) window.scrollTo({ top: y, left: 0, behavior: "instant" });
+  if (keepScroll) setScrollY(y, "instant");
   if (view === "lesson") pinActiveRails();
   if (focus) requestAnimationFrame(() => revealReply(focus));
 }
@@ -1665,16 +1702,16 @@ function bindRailHide() {
     const rail = document.querySelector(".step-rail");
     if (!rail || window.matchMedia("(min-width: 721px)").matches) {
       document.body.classList.remove("rail-slim");
-      railY = window.scrollY || 0;
+      railY = getScrollY();
       return;
     }
-    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    const y = getScrollY();
     if (y < 16) document.body.classList.remove("rail-slim");
     else if (y > railY + 8) document.body.classList.add("rail-slim");
     else if (y < railY - 8) document.body.classList.remove("rail-slim");
     railY = y;
   };
-  window.addEventListener("scroll", tick, { passive: true });
+  document.addEventListener("scroll", tick, { passive: true, capture: true });
 }
 
 function bindShell() {
@@ -2344,6 +2381,7 @@ function bindPwa() {
   document.body.classList.toggle("is-standalone", kind.standalone);
   document.body.classList.toggle("is-ios", kind.ios);
   document.body.classList.toggle("is-android", kind.android);
+  pinAppShell();
 
   document.addEventListener("click", (e) => {
     const open = e.target.closest("[data-pwa-open]");
