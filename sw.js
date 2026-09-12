@@ -1,10 +1,10 @@
-const CACHE = "se-cabinet-v12";
+const CACHE = "se-cabinet-v13";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=38",
-  "app.js?v=33",
-  "course.js?v=9",
+  "styles.css?v=40",
+  "app.js?v=35",
+  "course.js?v=10",
   "config.js?v=3",
   "manifest.webmanifest",
   "assets/hero-4k.webp",

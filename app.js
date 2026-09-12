@@ -37,6 +37,17 @@ const load = (k, fallback) => {
 };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
+const DOCK_ICONS = {
+  home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.8 12 4.4l7.5 6.4V20a.8.8 0 0 1-.8.8h-4.7v-6.2H10v6.2H5.3a.8.8 0 0 1-.8-.8z"/></svg>',
+  book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.4 5.2h6.2A2.4 2.4 0 0 1 14 7.6v11.6H7.8A2.4 2.4 0 0 1 5.4 16.8V5.2z"/><path d="M14 7.6h4.6v11.6H14"/><path d="M5.4 16.8h8.6"/></svg>',
+  kira: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4l1.15 4.55L17.7 9.1l-4.55 1.15L12 14.8l-1.15-4.55L6.3 9.1l4.55-1.15z"/><path d="M18.2 14.4l.7 2.55 2.55.7-2.55.7-.7 2.55-.7-2.55-2.55-.7 2.55-.7z"/></svg>',
+  grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.4" y="4.4" width="6.4" height="6.4" rx="1.3"/><rect x="13.2" y="4.4" width="6.4" height="6.4" rx="1.3"/><rect x="4.4" y="13.2" width="6.4" height="6.4" rx="1.3"/><rect x="13.2" y="13.2" width="6.4" height="6.4" rx="1.3"/></svg>',
+};
+
+function dockItem(href, on, icon, label) {
+  return `<a href="${href}" class="${on ? "on" : ""}">${DOCK_ICONS[icon]}<span>${label}</span></a>`;
+}
+
 let user = load(LS.user, null);
 let apply = load(LS.apply, {});
 let paid = Boolean(load(LS.paid, false) || user);
@@ -649,10 +660,10 @@ function shellHtml(inner) {
         <main class="main">${inner}</main>
       </div>
       <nav class="app-dock" aria-label="Разделы кабинета">
-        <a href="#/guide" class="${view === "guide" ? "on" : ""}">старт</a>
-        <a href="#/lesson/${esc(currentId)}" class="${view === "lesson" ? "on" : ""}">уроки</a>
-        <a href="#/kira" class="${view === "kira" ? "on" : ""}">кира ai</a>
-        <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">схемы</a>
+        ${dockItem("#/guide", view === "guide", "home", "Старт")}
+        ${dockItem("#/lesson/" + esc(currentId), view === "lesson", "book", "Уроки")}
+        ${dockItem("#/kira", view === "kira", "kira", "Кира")}
+        ${dockItem("#/atlas", view === "atlas", "grid", "Схемы")}
       </nav>
     </div>`;
 }
