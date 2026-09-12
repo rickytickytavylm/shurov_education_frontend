@@ -292,7 +292,9 @@ function route() {
     }
     currentId = id;
     view = user ? "lesson" : nextPublic();
-  } else if (path === "kira" || path === "atlas" || path === "tools" || path === "guide" || path === "library") {
+  } else if (path === "tools") {
+    view = user ? (onboardingDone() ? "lesson" : "guide") : nextPublic();
+  } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library") {
     view = user ? path : nextPublic();
   } else if (path === "login") {
     if (user) {
@@ -406,10 +408,6 @@ function render(opts) {
     $app.innerHTML = shellHtml(atlasHtml());
     bindShell();
     bindAtlas();
-  } else if (view === "tools") {
-    $app.innerHTML = shellHtml(toolsHtml());
-    bindShell();
-    bindTools();
   } else {
     $app.innerHTML = shellHtml(lessonHtml());
     bindShell();
@@ -683,7 +681,6 @@ function shellHtml(inner) {
           <a href="#/guide" class="${view === "guide" ? "on" : ""}">Как всё устроено</a>
           <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира AI</a>
           <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">14 схем</a>
-          <a href="#/tools" class="${view === "tools" ? "on" : ""}">Инструменты</a>
           <a href="#/library" class="${view === "library" ? "on" : ""}">Литература</a>
         </nav>
         ${isStandalone() ? `<span class="pwa-badge light">приложение</span>` : `<button class="text-link light" type="button" data-pwa-open>на телефон</button>`}
@@ -708,7 +705,6 @@ function shellHtml(inner) {
             <a href="#/guide" class="${view === "guide" ? "on" : ""}">Как всё устроено</a>
             <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира AI</a>
             <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">14 схем</a>
-            <a href="#/tools" class="${view === "tools" ? "on" : ""}">Инструменты</a>
             <a href="#/library" class="${view === "library" ? "on" : ""}">Литература</a>
           </div>
           <div class="portrait">
@@ -1095,8 +1091,7 @@ function guideHtml() {
         <div><b>Итоговый тест</b><p>После всех тем — итоговый тест. Возможность закрепить пройденное и получить сертификат при результате 75% и выше.</p></div>
         <div><b>Литература</b><p>Материалы по теме созависимости: научная основа программы и то, что можно почитать дополнительно.</p></div>
         <div><b>14 схем</b><p>Раздел, в котором собраны 14 схем, по которым живут созависимые отношения. Каждая схема разобрана одинаково: что это простыми словами, как выглядит в жизни, почему держится и что с этим делает курс. Это учебный материал, не диагностика.</p></div>
-        <div><b>Инструменты</b><p>Рабочие листы рядом с лекциями. Можно заполнять прямо на платформе, без отдельной тетради.</p></div>
-        <div><b>Веб-приложение</b><p>Позволяет пользоваться платформой как обычным приложением на телефоне: быстро открывать уроки, задания и инструменты.</p></div>
+        <div><b>Веб-приложение</b><p>Позволяет пользоваться платформой как обычным приложением на телефоне: быстро открывать уроки, задания и схемы.</p></div>
       </div>
       <p class="hint" id="guideGateNote" ${onboardingDone() ? "hidden" : ""}>Сначала отметьте согласие или отказ и сохраните данные выше — без этого уроки закрыты.</p>
       <div class="row"><a class="btn" id="toLessons" href="#/lesson/${esc(continueLessonId())}">перейти к урокам</a></div>
@@ -1451,7 +1446,7 @@ function bindLogin() {
     paid = true;
     save(LS.paid, true);
     await post("/auth/login", user);
-    go(onboardingDone() ? "/lesson/" + continueLessonId() : "/guide");
+    go("/guide");
   };
 }
 
@@ -1562,8 +1557,11 @@ function bindShell() {
   const out = document.getElementById("logout");
   if (out) {
     out.onclick = () => {
-      view = "start";
-      go("/");
+      try {
+        localStorage.clear();
+      } catch (_) {}
+      location.hash = "/";
+      location.reload();
     };
   }
 }
