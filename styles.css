@@ -2481,6 +2481,14 @@ body.pwa-open { overflow: hidden; }
 .guide-team b { display: block; color: var(--ink); }
 .guide-team span { color: var(--mute); font-size: 14px; }
 .cert-box { margin-top: 8px; scroll-margin-top: calc(108px + env(safe-area-inset-top)); }
+.cert-box.is-need {
+  animation: certNeed 1s ease;
+  box-shadow: 0 0 0 2px #78699d;
+}
+@keyframes certNeed {
+  0%, 100% { box-shadow: 0 0 0 2px #78699d; }
+  40% { box-shadow: 0 0 0 6px rgba(120, 105, 157, 0.28); }
+}
 .cert-box h4 { margin: 0 0 8px; color: var(--ink); }
 .cert-lead { margin: 0 0 16px; color: var(--mute); font-size: 15px; }
 .cert-checks { display: grid; gap: 10px; margin: 0 0 4px; }

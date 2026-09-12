@@ -44,8 +44,8 @@ const DOCK_ICONS = {
   grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.4" y="4.4" width="6.4" height="6.4" rx="1.3"/><rect x="13.2" y="4.4" width="6.4" height="6.4" rx="1.3"/><rect x="4.4" y="13.2" width="6.4" height="6.4" rx="1.3"/><rect x="13.2" y="13.2" width="6.4" height="6.4" rx="1.3"/></svg>',
 };
 
-function dockItem(href, on, icon, label) {
-  return `<a href="${href}" class="${on ? "on" : ""}">${DOCK_ICONS[icon]}<span>${label}</span></a>`;
+function dockItem(href, on, icon, label, extra) {
+  return `<a href="${href}" class="${on ? "on" : ""}"${extra ? " " + extra : ""}>${DOCK_ICONS[icon]}<span>${label}</span></a>`;
 }
 
 let user = load(LS.user, null);
@@ -155,10 +155,39 @@ function hardReset() {
   location.reload();
 }
 
+let focusCert = false;
+
 function onboardingDone() {
   const picked = cert.consent === "yes" || cert.consent === "no";
   if (!picked || !cert.saved) return false;
   return ["fio", "passport", "issued", "code", "address"].every((k) => String(cert[k] || "").trim());
+}
+
+function showCertNeed() {
+  const err = document.getElementById("certErr");
+  if (err) {
+    err.hidden = false;
+    err.textContent = "Сначала отметьте согласие или отказ и сохраните данные. Без этого уроки закрыты.";
+  }
+  const box = document.getElementById("certBox");
+  if (box) {
+    box.classList.remove("is-need");
+    void box.offsetWidth;
+    box.classList.add("is-need");
+  }
+  revealReply("certBox");
+}
+
+function blockLessons(e) {
+  if (onboardingDone()) return false;
+  if (e) e.preventDefault();
+  if (view !== "guide" || !document.getElementById("certBox")) {
+    focusCert = true;
+    go("/guide");
+    return true;
+  }
+  showCertNeed();
+  return true;
 }
 
 function canOpenModule(mod) {
@@ -313,7 +342,7 @@ function route() {
         view = "guide";
         render();
       }
-      requestAnimationFrame(() => revealReply("certBox"));
+      requestAnimationFrame(() => showCertNeed());
       return;
     }
     currentId = id;
@@ -736,7 +765,7 @@ function shellHtml(inner) {
       </div>
       <nav class="app-dock" aria-label="Разделы кабинета">
         ${dockItem("#/guide", view === "guide", "home", "Старт")}
-        ${dockItem(onboardingDone() ? "#/lesson/" + esc(currentId) : "#/guide", view === "lesson", "book", "Уроки")}
+        ${dockItem(onboardingDone() ? "#/lesson/" + esc(currentId) : "#/guide", view === "lesson", "book", "Уроки", 'data-gate="lessons"')}
         ${dockItem("#/kira", view === "kira", "kira", "Кира")}
         ${dockItem("#/atlas", view === "atlas", "grid", "Схемы")}
       </nav>
@@ -1126,6 +1155,10 @@ function paintGuideGate() {
 function bindGuide() {
   guideSeen = true;
   save(LS.guide, true);
+  if (focusCert) {
+    focusCert = false;
+    requestAnimationFrame(() => showCertNeed());
+  }
   document.querySelectorAll("[data-cert]").forEach((box) => {
     box.addEventListener("change", () => {
       if (box.checked) {
@@ -1174,11 +1207,7 @@ function bindGuide() {
   const to = document.getElementById("toLessons");
   if (to) {
     to.onclick = (e) => {
-      if (onboardingDone()) return;
-      e.preventDefault();
-      const err = document.getElementById("certErr");
-      if (err) err.hidden = false;
-      revealReply("certBox");
+      if (blockLessons(e)) return;
     };
   }
 }
@@ -1566,12 +1595,13 @@ function bindShell() {
   $app.querySelectorAll(".lessons a, .lesson-rail a, .step-rail a").forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
-      if (!onboardingDone()) {
-        if (view !== "guide") go("/guide");
-        else revealReply("certBox");
-        return;
-      }
+      if (blockLessons(e)) return;
       go("/lesson/" + a.dataset.id);
+    });
+  });
+  $app.querySelectorAll('[data-gate="lessons"]').forEach((a) => {
+    a.addEventListener("click", (e) => {
+      if (blockLessons(e)) return;
     });
   });
   const out = document.getElementById("logout");
