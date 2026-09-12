@@ -129,16 +129,23 @@ function moduleComplete(mod) {
   return list.length > 0 && list.every((l) => Boolean(progress[l.id]));
 }
 
+function onboardingDone() {
+  const picked = cert.consent === "yes" || cert.consent === "no";
+  if (!picked || !cert.saved) return false;
+  return ["fio", "passport", "issued", "code", "address"].every((k) => String(cert[k] || "").trim());
+}
+
 function canOpenModule(mod) {
-  return Boolean(user && mod);
+  return Boolean(user && mod && onboardingDone());
 }
 
 function canOpenLesson(id) {
-  return Boolean(user && id);
+  return Boolean(user && id && onboardingDone());
 }
 
 function lockReason(id) {
   if (!user) return "need-auth";
+  if (!onboardingDone()) return "need-guide";
   return "";
 }
 
@@ -275,20 +282,34 @@ function route() {
     return;
   }
   if (path === "lesson" && id) {
+    if (user && !onboardingDone()) {
+      if (view !== "guide") {
+        view = "guide";
+        render();
+      }
+      requestAnimationFrame(() => revealReply("certBox"));
+      return;
+    }
     currentId = id;
     view = user ? "lesson" : nextPublic();
   } else if (path === "kira" || path === "atlas" || path === "tools" || path === "guide" || path === "library") {
     view = user ? path : nextPublic();
   } else if (path === "login") {
-    view = user ? "lesson" : "login";
-    if (user) currentId = continueLessonId();
+    if (user) {
+      view = onboardingDone() ? "lesson" : "guide";
+      currentId = continueLessonId();
+    } else view = "login";
   } else if (path === "apply") {
-    view = user ? "lesson" : "apply";
-    if (user) currentId = continueLessonId();
-    else applyStep = firstApplyStep();
+    if (user) {
+      view = onboardingDone() ? "lesson" : "guide";
+      currentId = continueLessonId();
+    } else {
+      view = "apply";
+      applyStep = firstApplyStep();
+    }
   } else if (path === "pay") {
     if (paid && user) {
-      view = "lesson";
+      view = onboardingDone() ? "lesson" : "guide";
       currentId = continueLessonId();
     } else view = applyDone() || user ? "pay" : "apply";
   } else {
@@ -395,6 +416,7 @@ function render(opts) {
     bindLesson();
   }
   if (keepScroll) window.scrollTo({ top: y, left: 0, behavior: "instant" });
+  if (view === "lesson") pinActiveRails();
   if (focus) requestAnimationFrame(() => revealReply(focus));
 }
 
@@ -698,7 +720,7 @@ function shellHtml(inner) {
       </div>
       <nav class="app-dock" aria-label="Разделы кабинета">
         ${dockItem("#/guide", view === "guide", "home", "Старт")}
-        ${dockItem("#/lesson/" + esc(currentId), view === "lesson", "book", "Уроки")}
+        ${dockItem(onboardingDone() ? "#/lesson/" + esc(currentId) : "#/guide", view === "lesson", "book", "Уроки")}
         ${dockItem("#/kira", view === "kira", "kira", "Кира")}
         ${dockItem("#/atlas", view === "atlas", "grid", "Схемы")}
       </nav>
@@ -764,6 +786,10 @@ function lockedHtml(reason, module, lesson) {
       : "Сначала завершите предыдущий модуль программы.";
     const jump = prev ? firstIncompleteIn(prev) : continueLessonId();
     action = `<a class="btn" href="#/lesson/${esc(jump)}">перейти к незавершенному шагу</a>`;
+  } else if (reason === "need-guide") {
+    title = "Сначала оформите старт";
+    text = "Выберите согласие или отказ на сертификат и сохраните данные на экране «Как всё устроено». Без этого уроки закрыты.";
+    action = `<a class="btn" href="#/guide">открыть «Как всё устроено»</a>`;
   } else if (reason === "need-prev-lesson") {
     title = "Соблюдайте последовательность";
     const list = lessonsOf(module);
@@ -992,12 +1018,18 @@ function guideHtml() {
         <div><b>О ваших данных</b><p>Мы бережно относимся к вашей информации и соблюдаем конфиденциальность. Данные используются только для организации обучения.</p></div>
         <div><b>О налоговом вычете</b><p>В конце года вы сможете воспользоваться правом на налоговый вычет за пройденное обучение — в соответствии с Налоговым кодексом РФ.</p></div>
       </div>
-      <div class="tool-box cert-box">
+      <div class="tool-box cert-box" id="certBox">
         <h4>Что нужно сделать сейчас</h4>
-        <p class="cert-lead">Выберите один из вариантов. Это обязательно для всех, даже если сертификат вам не нужен.</p>
-        <div class="choices">
-          <button type="button" class="choice${consent === "yes" ? " on" : ""}" data-cert="yes"><strong>Согласие</strong><span>Хочу получить сертификат</span></button>
-          <button type="button" class="choice${consent === "no" ? " on" : ""}" data-cert="no"><strong>Отказ</strong><span>Сертификат не требуется</span></button>
+        <p class="cert-lead">Поставьте галочку: согласие или отказ. Потом сохраните данные. Это обязательно для всех — без этого уроки закрыты.</p>
+        <div class="cert-checks">
+          <label class="cert-check">
+            <input type="checkbox" data-cert="yes" ${consent === "yes" ? "checked" : ""} />
+            <span><strong>Согласие</strong> Хочу получить сертификат</span>
+          </label>
+          <label class="cert-check">
+            <input type="checkbox" data-cert="no" ${consent === "no" ? "checked" : ""} />
+            <span><strong>Отказ</strong> Сертификат не требуется</span>
+          </label>
         </div>
         <form id="certForm" class="cert-form">
           <label>ФИО*<input name="fio" type="text" autocomplete="name" value="${esc(cert.fio || "")}" placeholder="Фамилия, имя, отчество" /></label>
@@ -1005,10 +1037,11 @@ function guideHtml() {
           <label>Кем и когда выдан паспорт*<input name="issued" type="text" value="${esc(cert.issued || "")}" placeholder="Орган выдачи и дата" /></label>
           <label>Код подразделения*<input name="code" type="text" inputmode="numeric" value="${esc(cert.code || "")}" placeholder="000-000" /></label>
           <label>Адрес регистрации*<input name="address" type="text" value="${esc(cert.address || "")}" placeholder="Город, улица, дом, квартира" /></label>
-          <p class="fine">Если сертификат не нужен, в полях можно поставить прочерк. Заполнение формы обязательно для получения сертификата.</p>
+          <p class="fine">Если сертификат не нужен, в полях можно поставить прочерк. Сохранить форму всё равно нужно.</p>
+          <p class="form-err" id="certErr" hidden>Выберите согласие или отказ и заполните все поля.</p>
           <div class="row">
             <button class="btn" type="submit">сохранить</button>
-            ${cert.saved ? `<span class="cert-saved">данные сохранены</span>` : ""}
+            ${cert.saved ? `<span class="cert-saved" id="certSaved">данные сохранены</span>` : `<span class="cert-saved" id="certSaved" hidden>данные сохранены</span>`}
           </div>
         </form>
       </div>
@@ -1065,22 +1098,42 @@ function guideHtml() {
         <div><b>Инструменты</b><p>Рабочие листы рядом с лекциями. Можно заполнять прямо на платформе, без отдельной тетради.</p></div>
         <div><b>Веб-приложение</b><p>Позволяет пользоваться платформой как обычным приложением на телефоне: быстро открывать уроки, задания и инструменты.</p></div>
       </div>
-      <div class="row"><a class="btn" href="#/lesson/${esc(continueLessonId())}">перейти к урокам</a></div>
+      <p class="hint" id="guideGateNote" ${onboardingDone() ? "hidden" : ""}>Сначала отметьте согласие или отказ и сохраните данные выше — без этого уроки закрыты.</p>
+      <div class="row"><a class="btn" id="toLessons" href="#/lesson/${esc(continueLessonId())}">перейти к урокам</a></div>
     </section>`;
+}
+
+function paintGuideGate() {
+  const note = document.getElementById("guideGateNote");
+  if (note) note.hidden = onboardingDone();
 }
 
 function bindGuide() {
   guideSeen = true;
   save(LS.guide, true);
-  document.querySelectorAll("[data-cert]").forEach((btn) => {
-    btn.onclick = () => {
-      cert.consent = btn.dataset.cert;
+  document.querySelectorAll("[data-cert]").forEach((box) => {
+    box.addEventListener("change", () => {
+      if (box.checked) {
+        cert.consent = box.dataset.cert;
+        document.querySelectorAll("[data-cert]").forEach((other) => {
+          if (other !== box) other.checked = false;
+        });
+      } else if (cert.consent === box.dataset.cert) {
+        cert.consent = "";
+      }
       save(LS.cert, cert);
-      render();
-    };
+      paintGuideGate();
+    });
   });
   const form = document.getElementById("certForm");
   if (form) {
+    form.querySelectorAll("input[name]").forEach((input) => {
+      input.addEventListener("input", () => {
+        cert[input.name] = input.value;
+        save(LS.cert, cert);
+        paintGuideGate();
+      });
+    });
     form.onsubmit = (e) => {
       e.preventDefault();
       const fd = new FormData(form);
@@ -1089,9 +1142,28 @@ function bindGuide() {
       cert.issued = String(fd.get("issued") || "").trim();
       cert.code = String(fd.get("code") || "").trim();
       cert.address = String(fd.get("address") || "").trim();
+      const err = document.getElementById("certErr");
+      if (!cert.consent || !["fio", "passport", "issued", "code", "address"].every((k) => cert[k])) {
+        if (err) err.hidden = false;
+        revealReply("certBox");
+        return;
+      }
+      if (err) err.hidden = true;
       cert.saved = true;
       save(LS.cert, cert);
-      render();
+      const mark = document.getElementById("certSaved");
+      if (mark) mark.hidden = false;
+      paintGuideGate();
+    };
+  }
+  const to = document.getElementById("toLessons");
+  if (to) {
+    to.onclick = (e) => {
+      if (onboardingDone()) return;
+      e.preventDefault();
+      const err = document.getElementById("certErr");
+      if (err) err.hidden = false;
+      revealReply("certBox");
     };
   }
 }
@@ -1352,7 +1424,7 @@ function bindStart() {
     go("/apply");
   };
   const goLogin = () => go("/login");
-  const goCourse = () => go("/lesson/" + continueLessonId());
+  const goCourse = () => go(onboardingDone() ? "/lesson/" + continueLessonId() : "/guide");
   const goFree = () => {
     if (user) go("/lesson/" + continueLessonId());
     else goApply("");
@@ -1379,7 +1451,7 @@ function bindLogin() {
     paid = true;
     save(LS.paid, true);
     await post("/auth/login", user);
-    go(guideSeen ? "/lesson/" + continueLessonId() : "/guide");
+    go(onboardingDone() ? "/lesson/" + continueLessonId() : "/guide");
   };
 }
 
@@ -1443,6 +1515,18 @@ function bindPay() {
   };
 }
 
+function pinActiveRails() {
+  document.querySelectorAll(".lesson-rail, .step-rail").forEach((rail) => {
+    const on = rail.querySelector("a.on");
+    if (!on) return;
+    const pad = 14;
+    const extra = Math.max(8, rail.clientWidth - on.offsetWidth - pad);
+    rail.style.paddingRight = extra + "px";
+    const left = on.getBoundingClientRect().left - rail.getBoundingClientRect().left + rail.scrollLeft;
+    rail.scrollLeft = Math.max(0, left - pad);
+  });
+}
+
 let railY = 0;
 function bindRailHide() {
   if (window.SE_RAIL_BOUND) return;
@@ -1467,6 +1551,11 @@ function bindShell() {
   $app.querySelectorAll(".lessons a, .lesson-rail a, .step-rail a").forEach((a) => {
     a.addEventListener("click", (e) => {
       e.preventDefault();
+      if (!onboardingDone()) {
+        if (view !== "guide") go("/guide");
+        else revealReply("certBox");
+        return;
+      }
       go("/lesson/" + a.dataset.id);
     });
   });

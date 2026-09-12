@@ -1682,6 +1682,7 @@ html, body { background: var(--snow); color: var(--ink); }
     gap: 8px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto;
     padding: 10px 14px;
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
@@ -2245,6 +2246,7 @@ html, body { background: var(--snow); color: var(--ink); }
     gap: 8px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto;
     padding: 8px 14px 12px;
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
@@ -2478,9 +2480,28 @@ body.pwa-open { overflow: hidden; }
 .guide-team > div { padding: 16px 18px; background: #f7f4ee; border-radius: 14px; }
 .guide-team b { display: block; color: var(--ink); }
 .guide-team span { color: var(--mute); font-size: 14px; }
-.cert-box { margin-top: 8px; }
+.cert-box { margin-top: 8px; scroll-margin-top: calc(108px + env(safe-area-inset-top)); }
 .cert-box h4 { margin: 0 0 8px; color: var(--ink); }
 .cert-lead { margin: 0 0 16px; color: var(--mute); font-size: 15px; }
+.cert-checks { display: grid; gap: 10px; margin: 0 0 4px; }
+.cert-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.cert-check input {
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+  flex: 0 0 22px;
+  accent-color: #78699d;
+}
+.cert-check span { display: grid; gap: 2px; color: var(--ink); line-height: 1.35; }
+.cert-check strong { display: block; }
 .cert-form { display: grid; gap: 12px; margin-top: 18px; }
 .cert-form label { display: grid; gap: 6px; font-size: 14px; color: var(--mute); }
 .cert-form input {
