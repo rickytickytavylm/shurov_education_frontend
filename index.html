@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#17151B" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -36,13 +36,25 @@
       try { localStorage.clear(); } catch (err) {}
       try { sessionStorage.clear(); } catch (err) {}
     }, true);
+    (function () {
+      function stop(e) { e.preventDefault(); }
+      ["gesturestart", "gesturechange", "gestureend"].forEach(function (type) {
+        document.addEventListener(type, stop, { passive: false });
+      });
+      var last = 0;
+      document.addEventListener("touchend", function (e) {
+        var now = Date.now();
+        if (now - last < 350) stop(e);
+        last = now;
+      }, { passive: false });
+    })();
   </script>
   <script src="config.js?v=3"></script>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/pwa-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Play:wght@400;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=48" />
+  <link rel="stylesheet" href="styles.css?v=49" />
 </head>
 <body>
   <div id="app"></div>
