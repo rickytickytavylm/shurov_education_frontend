@@ -57,14 +57,14 @@ let quizState = load(LS.quiz, {});
 let surveyState = load(LS.survey, {});
 let cert = load(LS.cert, {});
 let guideSeen = Boolean(load(LS.guide, false));
-let kira = load(LS.kira, [
+let kira = (load(LS.kira, [
   {
     id: "k0",
     name: "Кира AI",
     me: false,
     text: "Здравствуйте. Я Кира AI — помощник курса. Опираюсь на лекции доктора Шурова, 14 схем и рабочие листы. Помогу разобрать задание, личный эпизод и сформулировать границу без самообвинения. В острых кризисных ситуациях: 112 и очная медицинская помощь.",
   },
-]);
+]) || []).filter((m) => m && m.id !== "think" && m.text !== "Формирую ответ...");
 let toolState = load(LS.tools, {
   whose: {},
   script: {},
@@ -305,60 +305,97 @@ function nextPublic() {
   return "start";
 }
 
-function render() {
-  if (view !== "start") window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+function pendingHtml(text) {
+  return `<div class="reply-pending" id="replyPending" aria-live="polite">
+    <span class="reply-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span>${esc(text)}</span>
+  </div>`;
+}
+
+function revealReply(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const head = document.querySelector(".app-head");
+  const dock = document.querySelector(".app-dock");
+  const mobile = window.matchMedia("(max-width: 720px)").matches;
+  const headH = head ? head.getBoundingClientRect().height : 0;
+  const dockH = mobile && dock && getComputedStyle(dock).display !== "none" ? dock.getBoundingClientRect().height : 0;
+  const viewH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const rect = el.getBoundingClientRect();
+  const topLimit = headH + 12;
+  const botLimit = viewH - dockH - 12;
+  if (rect.top >= topLimit && rect.bottom <= botLimit) return;
+  window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - topLimit), behavior: "smooth" });
+}
+
+function showPendingIn(slotId, text) {
+  const slot = document.getElementById(slotId);
+  if (!slot) return;
+  slot.innerHTML = pendingHtml(text);
+  revealReply("replyPending");
+}
+
+function kiraMsgHtml(m) {
+  const think = Boolean(m.think) || m.id === "think";
+  return `<div class="msg${m.me ? " me" : ""}${think ? " is-think" : ""}" data-id="${esc(m.id)}">
+    <div class="who">${esc(m.name)}</div>
+    <div class="bubble">${think ? '<span class="reply-dots" aria-hidden="true"><i></i><i></i><i></i></span>' : esc(m.text)}</div>
+  </div>`;
+}
+
+function scrollKiraLatest() {
+  const log = document.getElementById("kiraLog");
+  if (!log) return;
+  const last = log.lastElementChild;
+  if (last) last.scrollIntoView({ block: "nearest", inline: "nearest" });
+  log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
+}
+
+function render(opts) {
+  opts = opts || {};
+  const keepScroll = Boolean(opts.keepScroll);
+  const focus = opts.focus || "";
+  const y = keepScroll ? window.scrollY : 0;
+  document.body.classList.toggle("is-kira", view === "kira");
+  if (!keepScroll && view !== "start") window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   if (view === "start") {
     $app.innerHTML = startHtml();
     bindStart();
-    return;
-  }
-  if (view === "login") {
+  } else if (view === "login") {
     $app.innerHTML = loginHtml();
     bindLogin();
-    return;
-  }
-  if (view === "apply") {
+  } else if (view === "apply") {
     $app.innerHTML = applyHtml();
     bindApply();
-    return;
-  }
-  if (view === "pay") {
+  } else if (view === "pay") {
     $app.innerHTML = payHtml();
     bindPay();
-    return;
-  }
-  if (view === "guide") {
+  } else if (view === "guide") {
     $app.innerHTML = shellHtml(guideHtml());
     bindShell();
     bindGuide();
-    return;
-  }
-  if (view === "library") {
+  } else if (view === "library") {
     $app.innerHTML = shellHtml(libraryHtml());
     bindShell();
-    return;
-  }
-  if (view === "kira") {
+  } else if (view === "kira") {
     $app.innerHTML = shellHtml(kiraHtml());
     bindShell();
     bindKira();
-    return;
-  }
-  if (view === "atlas") {
+  } else if (view === "atlas") {
     $app.innerHTML = shellHtml(atlasHtml());
     bindShell();
     bindAtlas();
-    return;
-  }
-  if (view === "tools") {
+  } else if (view === "tools") {
     $app.innerHTML = shellHtml(toolsHtml());
     bindShell();
     bindTools();
-    return;
+  } else {
+    $app.innerHTML = shellHtml(lessonHtml());
+    bindShell();
+    bindLesson();
   }
-  $app.innerHTML = shellHtml(lessonHtml());
-  bindShell();
-  bindLesson();
+  if (keepScroll) window.scrollTo({ top: y, left: 0, behavior: "instant" });
+  if (focus) requestAnimationFrame(() => revealReply(focus));
 }
 
 function startHtml() {
@@ -686,9 +723,9 @@ function goalsHtml(goals) {
   return `<ul class="goals">${goals.map((g) => `<li>${esc(g)}</li>`).join("")}</ul>`;
 }
 
-function reviewCard(review, tag) {
+function reviewCard(review, tag, id) {
   if (!review) return "";
-  return `<div class="review">
+  return `<div class="review reply-ai"${id ? ` id="${esc(id)}"` : ""}>
     <div class="tag">${esc(tag || "Клинический разбор Киры AI")}</div>
     <p>${esc(review.summary)}</p>
     <ul>${(review.points || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
@@ -779,11 +816,11 @@ function lectureHtml(module, lesson) {
         <p class="hint">${esc(task.hint)}</p>
         <textarea id="hwText" placeholder="Напишите любой ответ — разбор появится сразу">${esc(hw.text)}</textarea>
         <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу, и сразу появится демо-разбор.</p>
+        <div class="reply-slot" id="hwThread">${reviewCard(hw.review, "Разбор Киры AI", "hwReply")}</div>
         <div class="row">
           <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить на разбор"}</button>
           ${nextCta(module, lesson)}
         </div>
-        ${reviewCard(hw.review, "Разбор Киры AI")}
       </div>
     </section>`;
 }
@@ -811,7 +848,7 @@ function quizHtml(module, lesson) {
       </article>`;
     })
     .join("");
-  const score = done ? `<p class="quiz-score">Результат: ${state.score} из ${state.total} правильных ответов</p>` : "";
+  const score = done ? `<p class="quiz-score" id="quizScore">Результат: ${state.score} из ${state.total} правильных ответов</p>` : "";
   const verdict = done && isFinal ? finalVerdictHtml(state.score, lesson.passAt || 15) : "";
   return `
     ${lessonHead(module, lesson)}
@@ -821,29 +858,31 @@ function quizHtml(module, lesson) {
       <p class="lede">${isFinal
         ? "Вы дошли до финала. Курс «Любить, не теряя себя» завершён. Остался последний шаг — итоговый тест. В тесте 20 вопросов, к каждому — три варианта ответа. Нужно выбрать один верный. Для успешного прохождения нужно набрать 75% (15 из 20). Это не проверка ради оценки, а возможность ещё раз пройти по ключевым темам: слияние, спасательство, границы, возвращение опоры на себя. Результат появится сразу после завершения."
         : "Выберите один ответ в каждом вопросе. После отправки Кира AI разберёт ваши ответы. Это не экзамен, а способ проверить, как усвоен материал."}</p>
-      ${score}
-      ${verdict}
       <form id="quizForm" class="quiz-form">${body}
         <p class="form-err" id="quizErr" hidden>Пожалуйста, ответьте на каждый вопрос.</p>
         <div class="row">
           ${done ? `<button class="btn ghost" type="button" id="quizRetry">пройти ещё раз</button>` : `<button class="btn" type="submit" id="quizSend">${isFinal ? "завершить тест" : "отправить на проверку"}</button>`}
           ${nextCta(module, lesson)}
         </div>
-        ${isFinal ? "" : reviewCard(state.review, "Разбор ответов Киры AI")}
+        <div class="reply-slot" id="quizThread">
+          ${score}
+          ${verdict}
+          ${isFinal ? "" : reviewCard(state.review, "Разбор ответов Киры AI", "quizReply")}
+        </div>
       </form>
     </section>`;
 }
 
 function finalVerdictHtml(score, passAt) {
   if (score >= passAt) {
-    return `<div class="final-verdict is-pass">
+    return `<div class="final-verdict is-pass" id="finalVerdict">
       <h4>Вы успешно прошли тест</h4>
       <p>Ваши ответы показывают, что вы хорошо ориентируетесь в механизмах слияния, спасательства и выстраивания границ. Это значит, что материал курса не просто был прослушан, а переработан и соотнесён с собственным опытом.</p>
       <p>Вы видите разницу между созависимостью и любовью, понимаете, как возвращать ответственность взрослому близкому, и знаете, почему забота о себе — это не эгоизм, а основа устойчивости.</p>
       <p>Эти знания — ваша опора. К ним можно возвращаться в трудные моменты, когда привычные сценарии снова начинают управлять поведением. Благодарим за участие в курсе.</p>
     </div>`;
   }
-  return `<div class="final-verdict">
+  return `<div class="final-verdict" id="finalVerdict">
     <h4>Вы завершили тест</h4>
     <p>Для успешного прохождения курса нужно набрать не менее ${passAt} правильных ответов. Ваш результат чуть ниже. Это не повод для разочарования, а возможность ещё раз вернуться к темам, которые вызвали затруднения. Обратите внимание на модули, где были допущены ошибки.</p>
     <p>Изменения происходят постепенно. Возврат к материалу — это не шаг назад, а укрепление понимания. Попробуйте пройти тест ещё раз после повторения.</p>
@@ -912,7 +951,7 @@ function surveyHtml(module, lesson) {
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить</button>`}
           ${nextCta(module, lesson)}
         </div>
-        ${reviewCard(draft.review, "Разбор Киры AI")}
+        <div class="reply-slot" id="surveyThread">${reviewCard(draft.review, "Разбор Киры AI", "surveyReply")}</div>
       </form>
     </section>`;
 }
@@ -1085,15 +1124,9 @@ function libraryHtml() {
 }
 
 function kiraHtml() {
-  const msgs = kira
-    .map(
-      (m) => `<div class="msg${m.me ? " me" : ""}">
-        <div class="who">${esc(m.name)}</div>
-        <div class="bubble">${esc(m.text)}</div>
-      </div>`
-    )
-    .join("");
+  const msgs = kira.map((m) => kiraMsgHtml(m)).join("");
   return `
+    <div class="kira-page">
     <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
     <h2>Кира AI</h2>
     <p class="lede">AI-помощник курса. Опирается на программу доктора Шурова, 14 схем и рабочие листы. Поможет разобраться в теме, разобрать личный эпизод и найти опору — без самообвинения.</p>
@@ -1113,6 +1146,7 @@ function kiraHtml() {
           </button>
         </div>
       </form>
+    </div>
     </div>`;
 }
 
@@ -1464,7 +1498,8 @@ function bindLesson() {
     const err = document.getElementById("hwErr");
     if (err) err.hidden = true;
     send.disabled = true;
-    send.textContent = "проверяет…";
+    area.disabled = true;
+    showPendingIn("hwThread", "Кира читает ваш ответ…");
     try {
       const review = await reviewHomework(currentId, text);
       homework[currentId] = { text: area.value.trim() || text, review };
@@ -1487,8 +1522,7 @@ function bindLesson() {
       progress[currentId] = true;
       save(LS.progress, progress);
     }
-    send.disabled = false;
-    render();
+    render({ keepScroll: true, focus: "hwReply" });
   };
 }
 
@@ -1498,10 +1532,11 @@ function bindQuiz(lesson) {
   quizState[lesson.id] = quizState[lesson.id] || { picks: {} };
   form.querySelectorAll("button[data-q]").forEach((btn) => {
     btn.onclick = () => {
-      if (quizState[lesson.id].review) return;
+      if (quizState[lesson.id].review || quizState[lesson.id].score != null) return;
       quizState[lesson.id].picks[btn.dataset.q] = Number(btn.dataset.i);
       save(LS.quiz, quizState);
-      render();
+      const group = btn.closest(".choices") || btn.parentElement;
+      group.querySelectorAll("button[data-q]").forEach((b) => b.classList.toggle("on", b === btn));
     };
   });
   const retry = document.getElementById("quizRetry");
@@ -1522,10 +1557,8 @@ function bindQuiz(lesson) {
       return;
     }
     const send = document.getElementById("quizSend");
-    if (send) {
-      send.disabled = true;
-      send.textContent = "проверяет…";
-    }
+    if (send) send.disabled = true;
+    showPendingIn("quizThread", lesson.final ? "Считаем результат…" : "Кира проверяет ответы…");
     const review = lesson.final ? null : await reviewQuiz(lesson, picks);
     let score = 0;
     items.forEach((q) => {
@@ -1535,7 +1568,7 @@ function bindQuiz(lesson) {
     save(LS.quiz, quizState);
     progress[lesson.id] = true;
     save(LS.progress, progress);
-    render();
+    render({ keepScroll: true, focus: lesson.final ? "finalVerdict" : "quizReply" });
   };
 }
 
@@ -1566,7 +1599,14 @@ function bindSurvey(lesson) {
         draft.answers[id] = val;
       }
       persist();
-      render();
+      if (kind === "multi") {
+        btn.classList.toggle("on", (draft.answers[id] || []).includes(val));
+      } else {
+        const group = btn.closest(".choices") || btn.parentElement;
+        group.querySelectorAll("button[data-field]").forEach((b) => {
+          if (b.dataset.field === id) b.classList.toggle("on", b === btn);
+        });
+      }
     };
   });
   form.querySelectorAll("button[data-scale]").forEach((btn) => {
@@ -1574,7 +1614,8 @@ function bindSurvey(lesson) {
       if (draft.review) return;
       draft.answers[btn.dataset.scale] = Number(btn.dataset.n);
       persist();
-      render();
+      const row = btn.closest(".scale-row") || btn.parentElement;
+      row.querySelectorAll("button[data-scale]").forEach((b) => b.classList.toggle("on", b === btn));
     };
   });
   form.querySelectorAll("button[data-sg]").forEach((btn) => {
@@ -1586,7 +1627,8 @@ function bindSurvey(lesson) {
       arr[i] = Number(btn.dataset.n);
       draft.answers[id] = arr;
       persist();
-      render();
+      const row = btn.closest(".scale-row") || btn.parentElement;
+      row.querySelectorAll("button[data-sg]").forEach((b) => b.classList.toggle("on", b === btn));
     };
   });
   form.querySelectorAll("[data-text]").forEach((el) => {
@@ -1645,16 +1687,14 @@ function bindSurvey(lesson) {
       }
     }
     const send = document.getElementById("surveySend");
-    if (send) {
-      send.disabled = true;
-      send.textContent = "проверяет…";
-    }
+    if (send) send.disabled = true;
+    showPendingIn("surveyThread", "Кира читает анкету…");
     const review = await reviewSurvey(lesson, spec, draft);
     draft.review = review;
     persist();
     progress[lesson.id] = true;
     save(LS.progress, progress);
-    render();
+    render({ keepScroll: true, focus: "surveyReply" });
   };
 }
 
@@ -1672,7 +1712,7 @@ function bindKira() {
   const form = document.getElementById("kiraForm");
   const log = document.getElementById("kiraLog");
   const box = form && form.querySelector("textarea");
-  if (log) log.scrollTop = log.scrollHeight;
+  if (log) scrollKiraLatest();
   document.querySelectorAll(".kira-pills button").forEach((btn) => {
     btn.onclick = () => askKira(btn.dataset.q);
   });
@@ -1703,18 +1743,40 @@ function bindKira() {
   };
 }
 
+let kiraBusy = false;
+
 async function askKira(text) {
-  const q = String(text || "").trim() || "Демо-вопрос";
-  kira.push({ id: "k" + Date.now(), name: (user && user.name) || "Вы", me: true, text: q });
-  kira.push({ id: "think", name: "Кира AI", me: false, text: "Формирую ответ..." });
-  save(LS.kira, kira);
-  render();
-  await new Promise((r) => setTimeout(r, 380));
-  const reply = localKiraReply(q);
-  kira = kira.filter((m) => m.id !== "think");
-  kira.push({ id: "k" + Date.now() + "a", name: "Кира AI", me: false, text: reply });
-  save(LS.kira, kira);
-  render();
+  if (kiraBusy) return;
+  kiraBusy = true;
+  try {
+    const q = String(text || "").trim() || "Демо-вопрос";
+    const mine = { id: "k" + Date.now(), name: (user && user.name) || "Вы", me: true, text: q };
+    const think = { id: "think", name: "Кира AI", me: false, think: true, text: "" };
+    kira.push(mine);
+    save(LS.kira, kira.filter((m) => m.id !== "think"));
+    const log = document.getElementById("kiraLog");
+    if (log) {
+      log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
+      log.insertAdjacentHTML("beforeend", kiraMsgHtml(think));
+      scrollKiraLatest();
+    } else {
+      kira.push(think);
+      render();
+    }
+    await new Promise((r) => setTimeout(r, 420));
+    const reply = { id: "k" + Date.now() + "a", name: "Кира AI", me: false, text: localKiraReply(q) };
+    kira = kira.filter((m) => m.id !== "think");
+    kira.push(reply);
+    save(LS.kira, kira);
+    const live = document.getElementById("kiraLog");
+    const thinkEl = live && live.querySelector('[data-id="think"]');
+    if (thinkEl) thinkEl.outerHTML = kiraMsgHtml(reply);
+    else if (live) live.insertAdjacentHTML("beforeend", kiraMsgHtml(reply));
+    else render();
+    scrollKiraLatest();
+  } finally {
+    kiraBusy = false;
+  }
 }
 
 function localKiraReply(text) {
