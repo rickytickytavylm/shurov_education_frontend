@@ -379,12 +379,24 @@ h3 {
   overflow: hidden;
 }
 .video.is-live { display: block; }
+.video.is-live::before,
+.video.is-live .play,
+.video.is-live .video-meta {
+  content: none;
+  display: none !important;
+  pointer-events: none;
+}
 .video.is-live video {
+  position: relative;
+  z-index: 3;
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
+  min-height: 180px;
+  aspect-ratio: 16 / 9;
   object-fit: contain;
   background: #111015;
+  pointer-events: auto;
 }
 .video.is-live video::-webkit-media-controls-download-button,
 .video.is-live video::-internal-media-controls-download-button {
