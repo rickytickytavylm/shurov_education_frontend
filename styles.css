@@ -1694,7 +1694,7 @@ html, body { background: var(--snow); color: var(--ink); }
     height: var(--app-h, 100dvh);
     max-height: var(--app-h, 100dvh);
     overflow: hidden;
-    background: #17151b;
+    background: #f7f4ee;
     overscroll-behavior: none;
   }
   .app {
@@ -1738,10 +1738,20 @@ html, body { background: var(--snow); color: var(--ink); }
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    overflow: visible;
+    overflow: hidden;
     padding: 10px 14px;
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
+    max-height: 140px;
+    transition: max-height 0.22s ease, padding 0.22s ease, opacity 0.18s ease, border-width 0.18s ease;
+  }
+  body.rail-slim .lesson-rail {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-bottom-width: 0;
+    pointer-events: none;
   }
   .lesson-rail::-webkit-scrollbar { display: none; }
   .lesson-rail a {
@@ -1771,6 +1781,7 @@ html, body { background: var(--snow); color: var(--ink); }
     min-height: 0;
     overflow: hidden;
   }
+  body.kb-open .app-dock { display: none !important; }
   .app-dock {
     position: fixed;
     left: 0;
@@ -1906,16 +1917,7 @@ html, body { background: var(--snow); color: var(--ink); }
     margin: 0 0 8px;
     font-size: 22px;
   }
-  body.is-kira .kira-pills {
-    flex: 0 0 auto;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    margin: 0 0 8px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  body.is-kira .kira-pills::-webkit-scrollbar { display: none; }
-  body.is-kira .kira-pills button { flex: 0 0 auto; }
+  body.is-kira .kira-pills { display: none; }
   body.is-kira .chat-wrap {
     flex: 1 1 0;
     min-height: 0;
@@ -2340,15 +2342,20 @@ html, body { background: var(--snow); color: var(--ink); }
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    overflow: visible;
+    overflow: hidden;
     padding: 8px 14px 12px;
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
+    max-height: 160px;
+    transition: max-height 0.22s ease, padding 0.22s ease, opacity 0.18s ease, border-width 0.18s ease;
   }
   body.rail-slim .step-rail {
-    max-height: none;
-    opacity: 1;
-    pointer-events: auto;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+    border-bottom-width: 0;
+    pointer-events: none;
   }
   .step-rail::-webkit-scrollbar { display: none; }
   .step-rail a {
@@ -2573,6 +2580,7 @@ body.pwa-open { overflow: hidden; }
   font-size: 14px;
 }
 #introSurveyBox { scroll-margin-top: calc(108px + env(safe-area-inset-top)); }
+#surveySaved { scroll-margin-top: calc(120px + env(safe-area-inset-top)); }
 #introSurveyBox .survey-form { max-width: none; }
 #introSurveyBox .survey-block { background: #fff; }
 .guide-facts { display: grid; gap: 12px; margin: 18px 0 26px; }

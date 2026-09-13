@@ -70,7 +70,7 @@ let kira = (load(LS.kira, [
     id: "k0",
     name: "Кира AI",
     me: false,
-    text: "Здравствуйте. Я Кира — куратор этого кабинета. Знаю Старт, модуль 1, 14 схем и рабочие листы. Могу разобрать лекцию, задание или ваш эпизод: отделю факт от вины и подскажу один следующий шаг. Сейчас открыты Старт и первый модуль; следующие откроются примерно через неделю. Если опасно — 112 и очная помощь, не упражнения.",
+    text: "Здравствуйте. Я Кира — куратор кабинета. Знаю Старт, модуль 1, 14 схем и задания. Разберу лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда. Если опасно: 112 и очная помощь.",
   },
 ]) || []).filter((m) => m && m.id !== "think" && m.text !== "Формирую ответ...");
 let toolState = load(LS.tools, {
@@ -460,8 +460,14 @@ function setScrollY(y, behavior) {
 function pinAppShell() {
   const set = () => {
     const vv = window.visualViewport;
-    const h = Math.round((vv && vv.height) || window.innerHeight || 0);
+    const layout = window.innerHeight || 0;
+    const visual = vv ? vv.height : layout;
+    const keyboard = layout - visual > 120;
+    document.body.classList.toggle("kb-open", keyboard);
+    const h = Math.round((keyboard ? layout : visual || layout) || 0);
     if (h) document.documentElement.style.setProperty("--app-h", h + "px");
+    const theme = document.querySelector('meta[name="theme-color"]');
+    if (theme) theme.setAttribute("content", document.querySelector(".app") ? "#f7f4ee" : "#17151b");
   };
   set();
   if (window.SE_VV_BOUND) return;
@@ -799,7 +805,7 @@ function shellHtml(inner) {
         })
         .join("");
       return `<div class="nav-mod${openMod ? "" : " is-lock"}${moduleComingSoon(m) ? " is-soon" : ""}${moduleComplete(m) ? " is-done" : ""}${m.free ? " is-free" : ""}">
-        <div class="n">${m.free ? "вводный практикум · бесплатно" : moduleComingSoon(m) ? "модуль " + m.n + " · через неделю" : m.final ? "финал · сертификат" : "модуль " + m.n}</div>
+        <div class="n">${moduleComingSoon(m) ? (m.final ? "итоговый тест · скоро" : "модуль " + m.n + " · скоро") : m.final ? "финал · сертификат" : "модуль " + m.n}</div>
         <div class="t">${esc(m.title)}</div>
         <div class="lessons">${items}</div>
       </div>`;
@@ -814,7 +820,7 @@ function shellHtml(inner) {
       const done = moduleComplete(m) ? " is-done" : "";
       const lock = canOpenModule(m) ? "" : " is-lock";
       const soon = moduleComingSoon(m) ? " is-soon" : "";
-      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный практикум" : moduleComingSoon(m) ? "Модуль " + m.n + ", откроется через неделю" : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
+      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${moduleComingSoon(m) ? (m.final ? "Итоговый тест, скоро откроется" : "Модуль " + m.n + ", скоро откроется") : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
     })
     .join("");
   const steps = lessonsOf(here.module)
@@ -927,7 +933,7 @@ function nextCta(module, lesson) {
 function comingSoonActions(mod) {
   const title = (mod && mod.title) || "следующий модуль";
   return `<div class="wait-actions">
-    <p class="wait-note">«${esc(title)}» откроется примерно через неделю. Сейчас можно остаться в первом модуле или разобрать тему с Кирой.</p>
+    <p class="wait-note">«${esc(title)}» скоро откроется. Сейчас можно остаться в первом модуле или разобрать тему с Кирой.</p>
     <a class="btn" href="#/kira">поговорить с Кирой</a>
     <a class="btn ghost" href="#/lesson/m1-l1">вернуться к модулю 1</a>
   </div>`;
@@ -955,8 +961,8 @@ function lockedHtml(reason, module, lesson) {
     text = "На старте отметьте согласие или отказ, сохраните данные и заполните анкету. Без этого уроки закрыты.";
     action = `<a class="btn" href="#/guide">открыть «Как всё устроено»</a>`;
   } else if (reason === "coming-soon") {
-    title = "Этот модуль откроется через неделю";
-    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и первый модуль: видео, конспект и практика. Пока ждёте, можно разобрать тему с Кирой — она знает весь курс и кабинет.`;
+    title = "Скоро откроется";
+    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и первый модуль: видео, конспект и практика. Пока ждёте, можно разобрать тему с Кирой.`;
     action = `<a class="btn" href="#/kira">поговорить с Кирой</a>
       <a class="btn ghost" href="#/lesson/m1-l1">открыть модуль 1</a>`;
   } else if (reason === "need-prev-lesson") {
@@ -972,7 +978,7 @@ function lockedHtml(reason, module, lesson) {
   return `
     ${lessonHead(module, lesson)}
     <section class="section ${reason === "coming-soon" ? "wait-card" : "lock-card"}">
-      <div class="section-label">${reason === "coming-soon" ? "Следующая неделя" : "Последовательный доступ"}</div>
+      <div class="section-label">${reason === "coming-soon" ? "Скоро" : "Последовательный доступ"}</div>
       <h3>${esc(title)}</h3>
       <p class="lede">${esc(text)}</p>
       <div class="row">${action}</div>
@@ -1190,7 +1196,7 @@ function introSurveyPanel() {
         <div class="row">
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">сохранить анкету</button>`}
         </div>
-        <div class="reply-slot" id="surveyThread">${done ? `<div class="cert-saved">Готово. Анкета сохранена в вашем профиле.</div>` : ""}</div>
+        <div class="reply-slot" id="surveyThread">${done ? `<div class="cert-saved" id="surveySaved">Готово. Анкета сохранена в вашем профиле.</div>` : ""}</div>
       </form>
     </div>`;
 }
@@ -1415,12 +1421,12 @@ function kiraHtml() {
     <div class="kira-page">
     <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
     <h2>Кира AI</h2>
-    <p class="lede">Куратор кабинета: знает Старт, модуль 1, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули откроются примерно через неделю — до них можно писать сюда.</p>
+    <p class="lede">Куратор кабинета: знает Старт, модуль 1, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда.</p>
     <div class="kira-pills">
-      <button type="button" data-q="Что в клинической рамке курса называется созависимостью?">Определение созависимости</button>
-      <button type="button" data-q="Где точная граница между заботой и спасательством?">Забота vs спасательство</button>
-      <button type="button" data-q="Как выдержать право разочаровать, если сразу накрывает вина?">Границы и вина</button>
-      <button type="button" data-q="Разбери динамику треугольника Карпмана в семейном сценарии.">Треугольник Карпмана</button>
+      <button type="button" data-q="Что в этом курсе называется созависимостью?">Созависимость</button>
+      <button type="button" data-q="Где граница между заботой и спасательством?">Спасательство</button>
+      <button type="button" data-q="Как удержать границу, если накрывает вина?">Границы</button>
+      <button type="button" data-q="Разбери треугольник Карпмана простыми словами.">Карпман</button>
     </div>
     <div class="chat-wrap kira-wrap">
       <div class="chat-log" id="kiraLog">${msgs}</div>
@@ -1760,10 +1766,29 @@ function bindPay() {
   };
 }
 
-function pinActiveRails() {}
-
 function bindRailHide() {
-  document.body.classList.remove("rail-slim");
+  if (window.SE_RAIL_BOUND) return;
+  window.SE_RAIL_BOUND = true;
+  let last = 0;
+  const apply = (y) => {
+    if (!document.querySelector(".lesson-rail")) {
+      document.body.classList.remove("rail-slim");
+      last = y;
+      return;
+    }
+    if (y < 16) document.body.classList.remove("rail-slim");
+    else if (y > last + 8) document.body.classList.add("rail-slim");
+    else if (y < last - 8) document.body.classList.remove("rail-slim");
+    last = y;
+  };
+  document.addEventListener(
+    "scroll",
+    (e) => {
+      const main = e.target && e.target.closest ? e.target.closest(".main") : null;
+      if (main) apply(main.scrollTop);
+    },
+    { passive: true, capture: true }
+  );
 }
 
 function bindShell() {
@@ -1979,7 +2004,7 @@ function bindSurvey(lesson) {
       draft.review = null;
       draft.submitted = null;
       persist();
-      render(onStart ? { keepScroll: true, focus: "introSurveyBox" } : {});
+      render(onStart ? { keepScroll: true, focus: "surveySaved" } : {});
     };
   }
   form.onsubmit = async (e) => {
@@ -2031,7 +2056,7 @@ function bindSurvey(lesson) {
         go("/lesson/m1-l1");
         return;
       }
-      render({ keepScroll: true, focus: "introSurveyBox" });
+      render({ keepScroll: true, focus: "surveySaved" });
       return;
     }
     showPendingIn("surveyThread", "Кира читает анкету…");
@@ -2126,14 +2151,19 @@ async function askKira(text) {
 }
 
 function kiraContext() {
-  const { module, lesson } = findLesson(currentId);
+  let { module, lesson } = findLesson(currentId);
+  if (module && module.hidden) {
+    const open = findLesson("m1-l1");
+    module = open.module;
+    lesson = open.lesson;
+  }
   const intro = (surveyState[INTRO_SURVEY] && surveyState[INTRO_SURVEY].answers) || {};
   return {
     name: (user && user.name) || "",
     moduleTitle: module && module.title,
     lessonTitle: lesson && lesson.title,
     openNow: "Старт и модуль 1",
-    comingSoon: "модули 2, 3, 4 и итоговый тест примерно через неделю",
+    comingSoon: "модули 2, 3, 4 и итоговый тест — скоро",
     situation: intro.now || "",
     request: intro.in4weeks || "",
   };
@@ -2160,30 +2190,22 @@ async function liveKiraReply(text) {
 
 function localKiraReply(text) {
   const q = String(text || "");
-  const { module, lesson } = findLesson(currentId);
-  const here = "Текущий контекст: шаг «" + lesson.title + "» модуля «" + module.title + "».";
   if (/суицид|убить себя|не хочу жить|насили|избивает/i.test(q)) {
-    return "Приоритет: физическая безопасность. Если есть прямая угроза жизни, здоровью или насилие: незамедлительно обращайтесь в экстренные службы 112 и за очной медицинской помощью. Образовательный процесс возобновляется только после обеспечения безопасной среды.";
+    return "Если есть угроза жизни или насилие — 112 и очная помощь. Курс здесь не вместо безопасности.";
   }
   if (/созавис|слиян|раствор/i.test(q)) {
-    return here + " Созависимость в этом курсе — не «слишком сильная любовь», а устойчивая привычка, при которой ваше состояние регулирует другой человек: его интонация, трезвость или молчание определяют ваш день. Задача курса — вернуть опору на себя. Это тема вводного практикума и модуля 1. Рекомендую посмотреть схему «Слияние, контакт, обрыв» в разделе «14 схем».";
+    return "В этом курсе созависимость — не «слишком сильная любовь», а привычка регулировать себя через состояние другого. Тема модуля 1 и схемы «Слияние, контакт, обрыв».";
   }
   if (/карпман|треугольник/i.test(q)) {
-    return here + " Треугольник Карпмана — это три роли, по которым люди ходят вместо разговора: спасатель, жертва, преследователь. Каждая роль на минуту снимает тревогу, но закрепляет неравенство. Выход — во взрослом контакте: прямой разговор, уязвимость без беспомощности и забота по обоюдному согласию. Подробный разбор — в разделе «14 схем» (схема 01).";
+    return "Треугольник Карпмана — три роли вместо разговора: спасатель, жертва, преследователь. Выход — взрослый контакт: прямо сказать, не спасать без просьбы, не наказывать. Это схема 01 в разделе «14 схем».";
   }
   if (/спасательств|enable|выпил|алкогол/i.test(q)) {
-    return here + " Спасательство забирает у взрослого человека встречу с последствиями его выборов. Забота оставляет за другим его взрослость и ответственность. Курс не ставит целью переделать зависимого через ваше поведение. Три вопроса перед любой помощью: он просил? Он может сам? Что останется ему после моей помощи? Подробнее — в модуле 2 и инструменте «Чья это работа».";
+    return "Спасательство снимает вашу тревогу, но забирает у другого последствия его выбора. Три вопроса: он просил? он может сам? что останется ему после моей помощи?";
   }
   if (/винова|разочаров|сказать нет|границ/i.test(q)) {
-    return here + " Право разочаровать — это способность сохранить свою позицию, пока другой злится, обижается или молчит. Границы ломает не чужое давление, а вина, которая поднимается раньше слов. Первичный навык: выдержать паузу после правды и не бросаться сразу чинить чувство другого. Это фокус модуля 3.";
+    return "Границу чаще ломает не чужое давление, а вина. Первый навык: выдержать паузу после правды и не бросаться чинить чувство другого.";
   }
-  if (/домашк|задани|практик|провери|разбор/i.test(q)) {
-    return here + " Для разбора практического задания сформулируйте конкретный факт: дата и время, контекст, сказанные слова или действие. Нажмите «отправить на разбор» в блоке урока: я разберу структуру ответа и помогу отделить факты от самообвинения.";
-  }
-  return (
-    here +
-    " Созависимость в этом курсе — привычка жить чужим состоянием, а не «слишком сильная любовь». Смотрите на факт: что было сказано и сделано. Свою ответственность отделите от чужой и не чините сразу чувство другого взрослого. Сейчас открыты Старт и модуль 1; следующие модули — примерно через неделю. Пришлите сцену из дня — разберём её здесь."
-  );
+  return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модуль 1, следующие модули скоро.";
 }
 
 function bindTools() {
@@ -2289,17 +2311,22 @@ function profilePayload() {
 
 async function post(path, body) {
   if (!hasBackend()) return null;
+  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 20000) : null;
   try {
     const res = await fetch(api + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {}),
+      signal: ctrl ? ctrl.signal : undefined,
     });
     if (!res.ok) return null;
     const ct = res.headers.get("content-type") || "";
     return ct.includes("application/json") ? res.json() : null;
   } catch {
     return null;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
