@@ -954,7 +954,7 @@ function lectureHtml(module, lesson) {
   const goals = goalsHtml(lesson.goals || module.goals || []);
   return `
     ${lessonHead(module, lesson, goals)}
-    ${lesson.videoUrl ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload" src="${esc(lesson.videoUrl)}" type="video/mp4"></video></div>` : module.free ? "" : `<div class="video" role="img" aria-label="Видеоматериал лекции">
+    ${lesson.videoUrl ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture src="${esc(lesson.videoUrl)}"></video></div>` : module.free ? "" : `<div class="video" role="img" aria-label="Видеоматериал лекции">
       <div class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.8v10.4L18 12 9 6.8z"/></svg></div>
       <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)}</span></div>
     </div>`}
@@ -1782,6 +1782,17 @@ function bindShell() {
   }
 }
 
+function protectLessonVideo() {
+  document.querySelectorAll(".video.is-live video").forEach((video) => {
+    video.controlsList = "nodownload noplaybackrate";
+    video.disablePictureInPicture = true;
+    video.setAttribute("controlsList", "nodownload noplaybackrate");
+    const block = (e) => e.preventDefault();
+    video.addEventListener("contextmenu", block);
+    video.addEventListener("dragstart", block);
+  });
+}
+
 function bindLesson() {
   const { lesson } = findLesson(currentId);
   if (lockReason(currentId)) return;
@@ -1793,6 +1804,7 @@ function bindLesson() {
     bindSurvey(lesson);
     return;
   }
+  protectLessonVideo();
   const send = document.getElementById("hwSend");
   const area = document.getElementById("hwText");
   if (!send || !area) return;

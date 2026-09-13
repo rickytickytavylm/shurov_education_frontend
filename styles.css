@@ -386,6 +386,10 @@ h3 {
   object-fit: contain;
   background: #111015;
 }
+.video.is-live video::-webkit-media-controls-download-button,
+.video.is-live video::-internal-media-controls-download-button {
+  display: none !important;
+}
 .video .play {
   position: absolute;
   top: 50%;
