@@ -2309,10 +2309,11 @@ function profilePayload() {
   };
 }
 
-async function post(path, body) {
+async function post(path, body, ms) {
   if (!hasBackend()) return null;
+  const wait = Number(ms) > 0 ? Number(ms) : /chat|homework-review/.test(path) ? 75000 : 20000;
   const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timer = ctrl ? setTimeout(() => ctrl.abort(), 20000) : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), wait) : null;
   try {
     const res = await fetch(api + path, {
       method: "POST",

@@ -17,8 +17,8 @@
   window.EDU_CONFIG = {
     BACKEND_URL:
       location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "http://127.0.0.1:8000"
-        : "https://rickytickytavylm-shurov-ai-ea39.twc1.net",
+        ? "http://localhost:8788"
+        : "https://api.kira-ai.online",
   };
   window.asset = function (path) {
     if (!path) return "";
