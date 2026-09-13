@@ -1724,14 +1724,12 @@ html, body { background: var(--snow); color: var(--ink); }
   }
   .lesson-rail {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: auto;
+    overflow: visible;
     padding: 10px 14px;
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
-    scrollbar-width: none;
   }
   .lesson-rail::-webkit-scrollbar { display: none; }
   .lesson-rail a {
@@ -2084,12 +2082,26 @@ html, body { background: var(--snow); color: var(--ink); }
 .nav-mod.is-lock .n { opacity: 0.45; }
 .lessons a.is-lock { opacity: 0.42; }
 .lessons a.is-lock .dot { background: #d7d1c8; }
-.lock-card {
+.lock-card,
+.wait-card {
   max-width: 640px;
   padding: 28px;
   background: #f7f4ee;
-  border-radius: 14px;
+  border-radius: 18px;
 }
+.wait-card h3 { max-width: 18ch; }
+.wait-note {
+  margin: 0 0 16px;
+  color: #5b5660;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.wait-actions { width: 100%; }
+.wait-actions .row,
+.wait-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.lesson-rail a.is-soon,
+.step-rail a.is-soon,
+.nav-mod.is-soon .n { opacity: 0.72; }
 
 .quiz-form .choice,
 .survey-form .choice {
@@ -2314,27 +2326,17 @@ html, body { background: var(--snow); color: var(--ink); }
 
   .step-rail {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: auto;
+    overflow: visible;
     padding: 8px 14px 12px;
     background: #f7f4ee;
     border-bottom: 1px solid rgba(23, 21, 27, 0.08);
-    scrollbar-width: none;
-    max-height: 72px;
-    transform: translateY(0);
-    opacity: 1;
-    transition: max-height 0.28s ease, padding 0.28s ease, opacity 0.22s ease, border-width 0.22s ease;
   }
   body.rail-slim .step-rail {
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    opacity: 0;
-    border-bottom-width: 0;
-    pointer-events: none;
-    overflow: hidden;
+    max-height: none;
+    opacity: 1;
+    pointer-events: auto;
   }
   .step-rail::-webkit-scrollbar { display: none; }
   .step-rail a {

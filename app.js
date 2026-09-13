@@ -70,7 +70,7 @@ let kira = (load(LS.kira, [
     id: "k0",
     name: "Кира AI",
     me: false,
-    text: "Здравствуйте. Я Кира AI — помощник курса. Опираюсь на лекции доктора Шурова, 14 схем и рабочие листы. Помогу разобрать задание, личный эпизод и сформулировать границу без самообвинения. В острых кризисных ситуациях: 112 и очная медицинская помощь.",
+    text: "Здравствуйте. Я Кира — куратор этого кабинета. Знаю Старт, модуль 1, 14 схем и рабочие листы. Могу разобрать лекцию, задание или ваш эпизод: отделю факт от вины и подскажу один следующий шаг. Сейчас открыты Старт и первый модуль; следующие откроются примерно через неделю. Если опасно — 112 и очная помощь, не упражнения.",
   },
 ]) || []).filter((m) => m && m.id !== "think" && m.text !== "Формирую ответ...");
 let toolState = load(LS.tools, {
@@ -225,28 +225,39 @@ function blockLessons(e) {
   return true;
 }
 
+function moduleComingSoon(mod) {
+  return Boolean(mod && (mod.comingSoon || (mod.n >= 2 && !mod.free)));
+}
+
 function canOpenModule(mod) {
-  return Boolean(user && mod && onboardingDone());
+  return Boolean(user && mod && onboardingDone() && !moduleComingSoon(mod));
 }
 
 function canOpenLesson(id) {
-  return Boolean(user && id && onboardingDone());
+  if (!user || !id || !onboardingDone()) return false;
+  return !moduleComingSoon(findLesson(id).module);
 }
 
 function lockReason(id) {
   if (!user) return "need-auth";
   if (!onboardingDone()) return "need-guide";
+  if (moduleComingSoon(findLesson(id).module)) return "coming-soon";
   return "";
 }
 
 function continueLessonId() {
-  for (const m of course.modules) {
-    if (!canOpenModule(m)) continue;
+  const open = course.modules.filter((m) => canOpenModule(m) && !m.free);
+  const pool = open.length ? open : course.modules.filter((m) => canOpenModule(m));
+  for (const m of pool) {
     for (const l of lessonsOf(m)) {
       if (!progress[l.id]) return l.id;
     }
   }
-  return firstLessonId();
+  if (pool.length) {
+    const last = lessonsOf(pool[pool.length - 1]);
+    return (last[last.length - 1] && last[last.length - 1].id) || "m1-l1";
+  }
+  return "m1-l1";
 }
 
 function stepLabel(module, lesson) {
@@ -358,7 +369,6 @@ function pwaOpenBtn(label, cls) {
 
 function route() {
   document.body.classList.remove("rail-slim");
-  railY = 0;
   const { path, id } = parseHash();
   if (HOME_SECTIONS.has(path) && !id) {
     const needRender = view !== "start" || !$app.querySelector(".site");
@@ -536,7 +546,6 @@ function render(opts) {
     bindLesson();
   }
   if (keepScroll) setScrollY(y, "instant");
-  if (view === "lesson") pinActiveRails();
   if (focus) requestAnimationFrame(() => revealReply(focus));
 }
 
@@ -778,8 +787,8 @@ function shellHtml(inner) {
           return `<a class="${on}${lock}" href="#/lesson/${l.id}" data-id="${l.id}"><span class="dot${done}"></span><span>${esc(l.title)}</span></a>`;
         })
         .join("");
-      return `<div class="nav-mod${openMod ? "" : " is-lock"}${moduleComplete(m) ? " is-done" : ""}${m.free ? " is-free" : ""}">
-        <div class="n">${m.free ? "вводный практикум · бесплатно" : m.final ? "финал · сертификат" : "модуль " + m.n}</div>
+      return `<div class="nav-mod${openMod ? "" : " is-lock"}${moduleComingSoon(m) ? " is-soon" : ""}${moduleComplete(m) ? " is-done" : ""}${m.free ? " is-free" : ""}">
+        <div class="n">${m.free ? "вводный практикум · бесплатно" : moduleComingSoon(m) ? "модуль " + m.n + " · через неделю" : m.final ? "финал · сертификат" : "модуль " + m.n}</div>
         <div class="t">${esc(m.title)}</div>
         <div class="lessons">${items}</div>
       </div>`;
@@ -793,7 +802,8 @@ function shellHtml(inner) {
       const on = view === "lesson" && here.module.id === m.id ? " on" : "";
       const done = moduleComplete(m) ? " is-done" : "";
       const lock = canOpenModule(m) ? "" : " is-lock";
-      return `<a class="${on}${done}${lock}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный практикум" : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
+      const soon = moduleComingSoon(m) ? " is-soon" : "";
+      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${m.free ? "Вводный практикум" : moduleComingSoon(m) ? "Модуль " + m.n + ", откроется через неделю" : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
     })
     .join("");
   const steps = lessonsOf(here.module)
@@ -886,16 +896,30 @@ function reviewCard(review, tag, id) {
 function nextCta(module, lesson) {
   if (!progress[lesson.id]) return "";
   const next = nextStepId(module, lesson);
-  if (next) return `<a class="btn" href="#/lesson/${esc(next)}" id="goNext">следующий шаг</a>`;
+  if (next) {
+    const nxt = findLesson(next);
+    if (moduleComingSoon(nxt.module)) return comingSoonActions(nxt.module);
+    return `<a class="btn" href="#/lesson/${esc(next)}" id="goNext">следующий шаг</a>`;
+  }
   const mi = course.modules.findIndex((m) => m.id === module.id);
   const after = course.modules[mi + 1];
   if (after && !after.free && !paid) {
     return `<a class="btn" href="#/pay">активировать полную программу</a>`;
   }
+  if (after && moduleComingSoon(after)) return comingSoonActions(after);
   if (after && !canOpenModule(after)) {
     return `<p class="hint">Следующий модуль программы откроется после завершения всех этапов текущего.</p>`;
   }
   return `<p class="hint">Материалы программы освоены до текущего шага. Вы всегда можете вернуться к пройденным темам.</p>`;
+}
+
+function comingSoonActions(mod) {
+  const title = (mod && mod.title) || "следующий модуль";
+  return `<div class="wait-actions">
+    <p class="wait-note">«${esc(title)}» откроется примерно через неделю. Сейчас можно остаться в первом модуле или разобрать тему с Кирой.</p>
+    <a class="btn" href="#/kira">поговорить с Кирой</a>
+    <a class="btn ghost" href="#/lesson/m1-l1">вернуться к модулю 1</a>
+  </div>`;
 }
 
 function lockedHtml(reason, module, lesson) {
@@ -919,6 +943,11 @@ function lockedHtml(reason, module, lesson) {
     title = "Сначала оформите старт";
     text = "На старте отметьте согласие или отказ, сохраните данные и заполните анкету. Без этого уроки закрыты.";
     action = `<a class="btn" href="#/guide">открыть «Как всё устроено»</a>`;
+  } else if (reason === "coming-soon") {
+    title = "Этот модуль откроется через неделю";
+    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и первый модуль: видео, конспект и практика. Пока ждёте, можно разобрать тему с Кирой — она знает весь курс и кабинет.`;
+    action = `<a class="btn" href="#/kira">поговорить с Кирой</a>
+      <a class="btn ghost" href="#/lesson/m1-l1">открыть модуль 1</a>`;
   } else if (reason === "need-prev-lesson") {
     title = "Соблюдайте последовательность";
     const list = lessonsOf(module);
@@ -931,8 +960,8 @@ function lockedHtml(reason, module, lesson) {
   }
   return `
     ${lessonHead(module, lesson)}
-    <section class="section lock-card">
-      <div class="section-label">Последовательный доступ</div>
+    <section class="section ${reason === "coming-soon" ? "wait-card" : "lock-card"}">
+      <div class="section-label">${reason === "coming-soon" ? "Следующая неделя" : "Последовательный доступ"}</div>
       <h3>${esc(title)}</h3>
       <p class="lede">${esc(text)}</p>
       <div class="row">${action}</div>
@@ -1161,15 +1190,6 @@ function guideHtml() {
     <h2>Добро пожаловать на курс</h2>
     <p class="lede">Здесь начинается путь от жизни вокруг чужих проблем — к спокойствию, ясным границам и возвращению себя. Перед первым уроком познакомьтесь с форматом программы и заполните вводную анкету.</p>
 
-    <section class="section">
-      <div class="section-label">Слово автора программы</div>
-      <h3>Приветствие Василия Шурова</h3>
-      <div class="video" role="img" aria-label="Видео-приветствие эксперта">
-        <div class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.8v10.4L18 12 9 6.8z"/></svg></div>
-        <div class="video-meta"><p>Перед началом курса</p><span>видео скоро появится</span></div>
-      </div>
-    </section>
-
     <section class="guide-feat">
       ${guideShot("assets/guide-path.webp", "Курс как путь")}
       <div>
@@ -1383,7 +1403,7 @@ function kiraHtml() {
     <div class="kira-page">
     <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
     <h2>Кира AI</h2>
-    <p class="lede">AI-помощник курса. Опирается на программу доктора Шурова, 14 схем и рабочие листы. Поможет разобраться в теме, разобрать личный эпизод и найти опору — без самообвинения.</p>
+    <p class="lede">Куратор кабинета: знает Старт, модуль 1, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули откроются примерно через неделю — до них можно писать сюда.</p>
     <div class="kira-pills">
       <button type="button" data-q="Что в клинической рамке курса называется созависимостью?">Определение созависимости</button>
       <button type="button" data-q="Где точная граница между заботой и спасательством?">Забота vs спасательство</button>
@@ -1728,36 +1748,10 @@ function bindPay() {
   };
 }
 
-function pinActiveRails() {
-  document.querySelectorAll(".lesson-rail, .step-rail").forEach((rail) => {
-    const on = rail.querySelector("a.on");
-    if (!on) return;
-    const pad = 14;
-    const extra = Math.max(8, rail.clientWidth - on.offsetWidth - pad);
-    rail.style.paddingRight = extra + "px";
-    const left = on.getBoundingClientRect().left - rail.getBoundingClientRect().left + rail.scrollLeft;
-    rail.scrollLeft = Math.max(0, left - pad);
-  });
-}
+function pinActiveRails() {}
 
-let railY = 0;
 function bindRailHide() {
-  if (window.SE_RAIL_BOUND) return;
-  window.SE_RAIL_BOUND = true;
-  const tick = () => {
-    const rail = document.querySelector(".step-rail");
-    if (!rail || window.matchMedia("(min-width: 721px)").matches) {
-      document.body.classList.remove("rail-slim");
-      railY = getScrollY();
-      return;
-    }
-    const y = getScrollY();
-    if (y < 16) document.body.classList.remove("rail-slim");
-    else if (y > railY + 8) document.body.classList.add("rail-slim");
-    else if (y < railY - 8) document.body.classList.remove("rail-slim");
-    railY = y;
-  };
-  document.addEventListener("scroll", tick, { passive: true, capture: true });
+  document.body.classList.remove("rail-slim");
 }
 
 function bindShell() {
@@ -2100,8 +2094,7 @@ async function askKira(text) {
       kira.push(think);
       render();
     }
-    await new Promise((r) => setTimeout(r, 420));
-    const reply = { id: "k" + Date.now() + "a", name: "Кира AI", me: false, text: localKiraReply(q) };
+    const reply = { id: "k" + Date.now() + "a", name: "Кира AI", me: false, text: await liveKiraReply(q) };
     kira = kira.filter((m) => m.id !== "think");
     kira.push(reply);
     save(LS.kira, kira);
@@ -2114,6 +2107,39 @@ async function askKira(text) {
   } finally {
     kiraBusy = false;
   }
+}
+
+function kiraContext() {
+  const { module, lesson } = findLesson(currentId);
+  const intro = (surveyState[INTRO_SURVEY] && surveyState[INTRO_SURVEY].answers) || {};
+  return {
+    name: (user && user.name) || "",
+    moduleTitle: module && module.title,
+    lessonTitle: lesson && lesson.title,
+    openNow: "Старт и модуль 1",
+    comingSoon: "модули 2, 3, 4 и итоговый тест примерно через неделю",
+    situation: intro.now || "",
+    request: intro.in4weeks || "",
+  };
+}
+
+function kiraHistory() {
+  return kira
+    .filter((m) => m && !m.think && m.text)
+    .slice(-16)
+    .map((m) => ({ role: m.me ? "user" : "assistant", text: m.text }));
+}
+
+async function liveKiraReply(text) {
+  const data = await post("/edu/api/chat", {
+    key: accessKey(),
+    accessKey: accessKey(),
+    deviceId: deviceId(),
+    messages: kiraHistory(),
+    context: kiraContext(),
+  });
+  if (data && data.reply) return data.reply;
+  return localKiraReply(text);
 }
 
 function localKiraReply(text) {
@@ -2140,7 +2166,7 @@ function localKiraReply(text) {
   }
   return (
     here +
-    " Демо-ответ Киры AI на ваш запрос. В живом запуске здесь будет персональный разбор. По рамке курса: созависимость — это не «слишком сильная любовь», а привычка жить состоянием другого. Смотрите на факт (что было сказано и сделано), отделяйте свою ответственность от чужой и не чините состояние другого взрослого сразу. Можете прислать ещё один вопрос или конкретную сцену — учебный разбор придёт на любой запрос."
+    " Созависимость в этом курсе — привычка жить чужим состоянием, а не «слишком сильная любовь». Смотрите на факт: что было сказано и сделано. Свою ответственность отделите от чужой и не чините сразу чувство другого взрослого. Сейчас открыты Старт и модуль 1; следующие модули — примерно через неделю. Пришлите сцену из дня — разберём её здесь."
   );
 }
 
@@ -2339,20 +2365,30 @@ async function hydrateProfile() {
 }
 
 async function reviewHomework(lessonId, text) {
-  await new Promise((r) => setTimeout(r, 360));
   const { lesson } = findLesson(lessonId);
+  const data = await post("/edu/api/homework-review", {
+    key: accessKey(),
+    accessKey: accessKey(),
+    deviceId: deviceId(),
+    lessonId,
+    text,
+    context: { ...kiraContext(), lessonTitle: lesson.title },
+  });
+  if (data && data.summary) {
+    return { summary: data.summary, points: data.points || [] };
+  }
   const blame = /я плох|я эгоист|я виноват|я слабая/i.test(text);
   const concrete = /утром|вечером|вчера|сегодня|сказал|сделал|не сказал|позвонил|написал/i.test(text);
   return {
-    summary: "Клинический разбор практического задания по теме «" + lesson.title + "» от Киры AI.",
+    summary: "Разбор задания по теме «" + lesson.title + "». Если сервер курса не ответил, ниже — короткая рамка, с которой можно продолжить в чате с Кирой.",
     points: [
       concrete
-        ? "В ответе зафиксирован конкретный факт взаимодействия (время, место, действие). Это необходимая основа для анализа созависимого сценария без соскальзывания в самокритику."
-        : "Рекомендуется усилить опору на факты: опишите конкретную сцену последних дней (время, реплики, поступок), исключив общие характеристики своего характера.",
+        ? "В ответе уже есть факт взаимодействия. Это хорошая опора: держите время, место и действие, не соскальзывая в ярлык характера."
+        : "Добавьте одну сцену: время, место, что сказали или сделали. Без факта схема остаётся туманом.",
       blame
-        ? "Зафиксирована тенденция к самообвинению («я плохая/виноватая»). Психотерапевтическая задача курса: отделить объективное поведение от деструктивной вины, удерживающей сценарий."
-        : "Вы удерживаете исследовательскую позицию: безоценочная фиксация фактов позволяет точно увидеть скрытый механизм взаимодействия.",
-      "Для персонального разбора этой ситуации напишите Кире AI в чат: ассистент поможет сформулировать альтернативную реакцию.",
+        ? "Слышу самообвинение. В этом курсе вина не доказательство истины, а часть схемы. Отделите поступок от приговора себе."
+        : "Вы держите исследовательскую позицию: факт без суда над собой.",
+      "Напишите Кире в чат, если хотите разобрать эту сцену глубже — она знает модуль 1 и 14 схем.",
     ],
   };
 }
