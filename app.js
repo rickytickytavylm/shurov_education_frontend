@@ -90,12 +90,17 @@ toolState.script ||= {};
 toolState.halt ||= {};
 toolState.pause ||= [];
 let view = "start";
-let currentId = course && course.modules && course.modules[0] ? firstLessonId() : "m0-l1";
+let currentId = "m1-l1";
 let applyDraft = { ...apply };
 let applyStep = firstApplyStep();
 
+function cabinetModules() {
+  return (course.modules || []).filter((m) => m && !m.hidden);
+}
+
 function firstLessonId() {
-  return lessonsOf(course.modules[0])[0].id;
+  const m1 = cabinetModules().find((m) => m.id === "m1") || cabinetModules()[0];
+  return lessonsOf(m1)[0].id;
 }
 
 function firstApplyStep() {
@@ -110,7 +115,7 @@ function findLesson(id) {
     const lesson = lessonsOf(m).find((l) => l.id === id);
     if (lesson) return { module: m, lesson };
   }
-  const first = course.modules[0];
+  const first = cabinetModules().find((m) => m.id === "m1") || cabinetModules()[0] || course.modules[0];
   return { module: first, lesson: lessonsOf(first)[0] };
 }
 
@@ -119,7 +124,7 @@ function lessonsOf(mod) {
 }
 
 function allLessons() {
-  return course.modules.flatMap((m) => lessonsOf(m).map((l) => ({ ...l, moduleId: m.id })));
+  return cabinetModules().flatMap((m) => lessonsOf(m).map((l) => ({ ...l, moduleId: m.id })));
 }
 
 function progressPct() {
@@ -230,7 +235,7 @@ function moduleComingSoon(mod) {
 }
 
 function canOpenModule(mod) {
-  return Boolean(user && mod && onboardingDone() && !moduleComingSoon(mod));
+  return Boolean(user && mod && !mod.hidden && onboardingDone() && !moduleComingSoon(mod));
 }
 
 function canOpenLesson(id) {
@@ -246,8 +251,8 @@ function lockReason(id) {
 }
 
 function continueLessonId() {
-  const open = course.modules.filter((m) => canOpenModule(m) && !m.free);
-  const pool = open.length ? open : course.modules.filter((m) => canOpenModule(m));
+  const open = cabinetModules().filter((m) => canOpenModule(m) && m.id === "m1");
+  const pool = open.length ? open : cabinetModules().filter((m) => canOpenModule(m));
   for (const m of pool) {
     for (const l of lessonsOf(m)) {
       if (!progress[l.id]) return l.id;
@@ -265,7 +270,6 @@ function stepLabel(module, lesson) {
   const n = list.findIndex((l) => l.id === lesson.id) + 1;
   const total = list.length;
   if (module.final) return "Итоговый тест";
-  if (module.free) return `Вводный практикум · шаг ${n} из ${total}`;
   return `Модуль ${module.n} · шаг ${n} из ${total}`;
 }
 
@@ -390,8 +394,15 @@ function route() {
       requestAnimationFrame(() => showOnboardingNeed());
       return;
     }
-    currentId = id;
-    view = user ? "lesson" : nextPublic();
+    const opened = findLesson(id);
+    if (opened.module && opened.module.hidden) {
+      currentId = "m1-l1";
+      if (location.hash !== "#/lesson/m1-l1") location.hash = "/lesson/m1-l1";
+      view = user ? "lesson" : nextPublic();
+    } else {
+      currentId = id;
+      view = user ? "lesson" : nextPublic();
+    }
   } else if (path === "tools") {
     view = user ? (onboardingDone() ? "lesson" : "guide") : nextPublic();
   } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library") {
@@ -776,7 +787,7 @@ function payHtml() {
 
 function shellHtml(inner) {
   const p = progressPct();
-  const mods = course.modules
+  const mods = cabinetModules()
     .map((m) => {
       const openMod = canOpenModule(m);
       const items = lessonsOf(m)
@@ -796,7 +807,7 @@ function shellHtml(inner) {
     .join("");
   const doc = course.doctor || {};
   const here = findLesson(currentId);
-  const rail = course.modules
+  const rail = cabinetModules()
     .map((m) => {
       const lesson = lessonsOf(m)[0];
       const on = view === "lesson" && here.module.id === m.id ? " on" : "";
@@ -859,7 +870,7 @@ function shellHtml(inner) {
       </div>
       <nav class="app-dock" aria-label="Разделы кабинета">
         ${dockItem("#/guide", view === "guide", "home", "Старт")}
-        ${dockItem(onboardingDone() ? "#/lesson/" + esc(currentId) : "#/guide", view === "lesson", "book", "Уроки", 'data-gate="lessons"')}
+        ${dockItem(onboardingDone() ? "#/lesson/" + esc(continueLessonId()) : "#/guide", view === "lesson", "book", "Уроки", 'data-gate="lessons"')}
         ${dockItem("#/kira", view === "kira", "kira", "Кира")}
         ${dockItem("#/atlas", view === "atlas", "grid", "Схемы")}
       </nav>
@@ -929,7 +940,7 @@ function lockedHtml(reason, module, lesson) {
   let action = "";
   if (reason === "need-pay") {
     title = "Доступ к основному блоку программы";
-    text = "Вводный практикум открыт бесплатно. Четыре модуля курса открываются после активации доступа и завершения вводного блока.";
+    text = "Сначала оформите Старт: данные участника и анкета. После этого откроется первый модуль.";
     action = `<a class="btn" href="#/pay">активировать доступ</a>
       <a class="btn ghost" href="#/lesson/${esc(continueLessonId())}">вернуться к текущему шагу</a>`;
   } else if (reason === "need-prev-module") {
@@ -979,30 +990,31 @@ function lessonHtml() {
 
 function lectureHtml(module, lesson) {
   const hw = homework[lesson.id] || { text: "", review: null };
-  const task = lesson.homework || { prompt: "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.", hint: "Любая формулировка подойдёт: в демо разбор придёт сразу." };
+  const task = lesson.homework || { prompt: "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.", hint: "Пишите факт: время, место, действие." };
   const goals = goalsHtml(lesson.goals || module.goals || []);
+  const video = lesson.videoUrl
+    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture src="${esc(lesson.videoUrl)}"></video></div>`
+    : "";
   return `
-    ${lessonHead(module, lesson, goals)}
-    ${lesson.videoUrl ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture src="${esc(lesson.videoUrl)}"></video></div>` : module.free ? "" : `<div class="video" role="img" aria-label="Видеоматериал лекции">
-      <div class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.8v10.4L18 12 9 6.8z"/></svg></div>
-      <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)}</span></div>
-    </div>`}
+    ${lessonHead(module, lesson)}
+    ${video}
+    ${goals}
     <section class="section">
-      <div class="section-label">${module.free ? "Вводный практикум" : "Конспект"}</div>
+      <div class="section-label">Конспект</div>
       <h3>О чём этот урок</h3>
       <div class="lecture">${lectureBlocks(lesson.lecture)}</div>
     </section>
     <section class="section">
-      <div class="section-label">Практический блок</div>
+      <div class="section-label">Ваш ответ</div>
       <h3>Практическое задание</h3>
       <div class="hw">
         <p class="ask">${esc(task.prompt)}</p>
         <p class="hint">${esc(task.hint)}</p>
-        <textarea id="hwText" placeholder="Напишите любой ответ — разбор появится сразу">${esc(hw.text)}</textarea>
-        <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу, и сразу появится демо-разбор.</p>
-        <div class="reply-slot" id="hwThread">${reviewCard(hw.review, "Разбор Киры AI", "hwReply")}</div>
+        <textarea id="hwText" placeholder="Опишите сцену своими словами">${esc(hw.text)}</textarea>
+        <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу — Кира разберёт ответ.</p>
+        <div class="reply-slot" id="hwThread">${reviewCard(hw.review, "Разбор Киры", "hwReply")}</div>
         <div class="row">
-          <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить на разбор"}</button>
+          <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить Кире"}</button>
           ${nextCta(module, lesson)}
         </div>
       </div>
@@ -1201,7 +1213,7 @@ function guideHtml() {
           <li>Практические задания после каждой темы</li>
           <li>4 закрытые встречи с психологами в Zoom</li>
           <li>2 индивидуальные консультации</li>
-          <li>Вводный практикум, итоговый тест и сертификат</li>
+          <li>Видеолекции, практика и разбор Киры после каждого модуля</li>
         </ul>
         <p class="guide-note">Материалы остаются доступны в течение 3 месяцев.</p>
       </div>
@@ -1300,7 +1312,7 @@ function guideHtml() {
     </section>
 
     <p class="hint" id="guideGateNote" ${onboardingDone() ? "hidden" : ""}>Чтобы открыть уроки, сохраните данные участника и заполните вводную анкету.</p>
-    <div class="row"><a class="btn" id="toLessons" href="#/lesson/${esc(continueLessonId())}">начать обучение</a></div>`;
+    <div class="row"><a class="btn" id="toLessons" href="#/lesson/m1-l1">перейти к модулю 1</a></div>`;
 }
 
 function paintGuideGate() {
@@ -2015,6 +2027,10 @@ function bindSurvey(lesson) {
       save(LS.progress, progress);
       await syncProfile();
       paintGuideGate();
+      if (onboardingDone()) {
+        go("/lesson/m1-l1");
+        return;
+      }
       render({ keepScroll: true, focus: "introSurveyBox" });
       return;
     }
