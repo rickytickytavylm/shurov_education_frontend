@@ -14,7 +14,12 @@
     document.head.insertBefore(el, document.head.firstChild);
   }
   el.href = base;
-  window.EDU_CONFIG = { BACKEND_URL: "" };
+  window.EDU_CONFIG = {
+    BACKEND_URL:
+      location.hostname === "localhost" || location.hostname === "127.0.0.1"
+        ? "http://127.0.0.1:8000"
+        : "https://rickytickytavylm-shurov-ai-ea39.twc1.net",
+  };
   window.asset = function (path) {
     if (!path) return "";
     if (/^https?:\/\//i.test(path) || path.startsWith("data:") || path.startsWith("mailto:")) return path;

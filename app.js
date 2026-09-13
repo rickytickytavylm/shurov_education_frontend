@@ -10,6 +10,8 @@ const LS = {
   survey: "se_survey",
   cert: "se_cert",
   guide: "se_guide",
+  key: "se_key",
+  device: "se_device",
 };
 
 const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
@@ -50,6 +52,11 @@ function dockItem(href, on, icon, label, extra) {
 }
 
 let user = load(LS.user, null);
+if (user && !user.key) {
+  try {
+    user.key = localStorage.getItem(LS.key) || "";
+  } catch (_) {}
+}
 let apply = load(LS.apply, {});
 let paid = Boolean(load(LS.paid, false) || user);
 let progress = load(LS.progress, {});
@@ -379,15 +386,13 @@ function route() {
     view = user ? (onboardingDone() ? "lesson" : "guide") : nextPublic();
   } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library") {
     view = user ? path : nextPublic();
+  } else if (path === "hello") {
+    view = user ? "hello" : "login";
   } else if (path === "login") {
     if (user) view = "guide";
     else view = "login";
   } else if (path === "apply") {
-    if (user) view = "guide";
-    else {
-      view = "apply";
-      applyStep = firstApplyStep();
-    }
+    view = user ? "guide" : "login";
   } else if (path === "pay") {
     if (paid && user) view = "guide";
     else view = applyDone() || user ? "pay" : "apply";
@@ -498,6 +503,9 @@ function render(opts) {
   if (view === "start") {
     $app.innerHTML = startHtml();
     bindStart();
+  } else if (view === "hello") {
+    $app.innerHTML = helloHtml();
+    bindHello();
   } else if (view === "login") {
     $app.innerHTML = loginHtml();
     bindLogin();
@@ -669,13 +677,24 @@ function loginHtml() {
       </header>
       <div class="flow-main">
         <p class="eye">Личный кабинет</p>
-        <h1>Продолжить обучение</h1>
-        <p class="lead">Введите имя, с которым заходили на этом устройстве.</p>
+        <h1>Войти по ключу</h1>
+        <p class="lead">Введите личный ключ, который вам прислала команда курса.</p>
         <form class="stack-form" id="loginForm">
-          <label>имя<input name="name" type="text" required autocomplete="name" placeholder="Как к вам обращаться" value="${esc(user?.name || "")}" /></label>
+          <label>ключ доступа<input name="key" type="password" required autocomplete="current-password" placeholder="Ваш именной ключ" /></label>
+          <p class="form-err" id="loginErr" hidden>Этот ключ не подходит. Проверьте письмо или напишите куратору.</p>
           <button class="btn" type="submit">войти</button>
         </form>
-        <p class="fine">Нет входа: <a href="#/apply">начните с анкеты</a>. Боевой аккаунт подключим отдельно.</p>
+      </div>
+    </div>`;
+}
+
+function helloHtml() {
+  return `
+    <div class="flow hello-flow">
+      <div class="flow-main">
+        <p class="eye">Школа доктора Шурова</p>
+        <h1>Здравствуйте, ${esc(user && user.name ? user.name : "")}</h1>
+        <p class="lead">Открываем ваш кабинет.</p>
       </div>
     </div>`;
 }
@@ -935,7 +954,7 @@ function lectureHtml(module, lesson) {
   const goals = goalsHtml(lesson.goals || module.goals || []);
   return `
     ${lessonHead(module, lesson, goals)}
-    ${module.free ? "" : `<div class="video" role="img" aria-label="Видеоматериал лекции">
+    ${lesson.videoUrl ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload" src="${esc(lesson.videoUrl)}" type="video/mp4"></video></div>` : module.free ? "" : `<div class="video" role="img" aria-label="Видеоматериал лекции">
       <div class="play" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.8v10.4L18 12 9 6.8z"/></svg></div>
       <div class="video-meta"><p>${esc(lesson.title)}</p><span>${esc(lesson.duration)}</span></div>
     </div>`}
@@ -1581,42 +1600,69 @@ function bucketLabel(bucket) {
   return "не разобрано";
 }
 
+function deviceId() {
+  let id = "";
+  try {
+    id = localStorage.getItem(LS.device) || "";
+  } catch (_) {}
+  if (!id) {
+    id = (crypto.randomUUID && crypto.randomUUID()) || "dev-" + Date.now();
+    try {
+      localStorage.setItem(LS.device, id);
+    } catch (_) {}
+  }
+  return id;
+}
+
 function bindStart() {
-  const goApply = (email) => {
-    if (email) applyDraft.email = email;
-    go("/apply");
-  };
   const goLogin = () => go("/login");
   const goCourse = () => go(user ? "/guide" : "/login");
-  const goFree = () => {
-    if (user) go("/guide");
-    else goApply("");
-  };
   const login = document.getElementById("toLogin");
   const applyBtn = document.getElementById("toApply");
   const courseNav = document.getElementById("toCourseNav");
   if (login) login.onclick = goLogin;
-  if (applyBtn) applyBtn.onclick = () => goApply("");
+  if (applyBtn) applyBtn.onclick = goLogin;
   document.querySelectorAll("#toCourse").forEach((el) => { el.onclick = goCourse; });
-  document.querySelectorAll("#toFree").forEach((el) => { el.onclick = goFree; });
+  document.querySelectorAll("#toFree").forEach((el) => { el.onclick = goCourse; });
   if (courseNav) courseNav.onclick = goCourse;
 }
 
+function bindHello() {
+  setTimeout(() => go("/guide"), 1600);
+}
+
 function bindLogin() {
-  document.getElementById("loginForm").onsubmit = async (e) => {
+  const form = document.getElementById("loginForm");
+  if (!form) return;
+  form.onsubmit = async (e) => {
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const name = String(fd.get("name") || "").trim();
-    if (!name) return;
-    const key = name.toLowerCase();
-    user = { id: "u-" + key, name, email: "" };
+    const fd = new FormData(form);
+    const key = String(fd.get("key") || "").trim();
+    const err = document.getElementById("loginErr");
+    if (!key) return;
+    const send = form.querySelector("button[type='submit']");
+    if (send) send.disabled = true;
+    const data = await post("/edu/api/login", { key, deviceId: deviceId() });
+    if (!data || !data.ok || !data.user) {
+      if (err) {
+        err.hidden = false;
+        err.textContent = hasBackend()
+          ? "Этот ключ не подходит. Проверьте письмо или напишите куратору."
+          : "Сервер входа пока недоступен. Попробуйте чуть позже.";
+      }
+      if (send) send.disabled = false;
+      return;
+    }
+    user = { id: data.user.id, name: data.user.name, key };
     save(LS.user, user);
+    try {
+      localStorage.setItem(LS.key, key);
+    } catch (_) {}
     paid = true;
     save(LS.paid, true);
-    await post("/auth/login", user);
-    await hydrateProfile();
+    if (data.profile) applyProfile(data.profile);
     await syncProfile();
-    go("/guide");
+    go("/hello");
   };
 }
 
@@ -2157,20 +2203,33 @@ function hasBackend() {
   return Boolean(api);
 }
 
+function accessKey() {
+  try {
+    return (user && user.key) || localStorage.getItem(LS.key) || "";
+  } catch (_) {
+    return (user && user.key) || "";
+  }
+}
+
 function profilePayload() {
   return {
+    key: accessKey(),
+    accessKey: accessKey(),
     userId: userKey(),
+    deviceId: deviceId(),
     user,
-    apply,
-    paid,
     cert,
     survey: surveyState,
     progress,
     homework,
     quiz: quizState,
-    guideSeen,
-    name: user && user.name,
-    at: Date.now(),
+    extra: {
+      apply,
+      paid,
+      guideSeen,
+      name: user && user.name,
+      at: Date.now(),
+    },
   };
 }
 
@@ -2203,15 +2262,24 @@ async function getJson(path) {
 }
 
 async function syncProfile() {
-  if (!hasBackend() || !userKey()) return;
-  await post("/api/profile", profilePayload());
+  if (!hasBackend() || !accessKey()) return;
+  await post("/edu/api/profile", profilePayload());
 }
 
 function applyProfile(p) {
   if (!p || typeof p !== "object") return;
   if (p.user && p.user.name) {
-    user = { ...user, ...p.user, id: userKey() || p.user.id };
+    user = { ...user, ...p.user, id: userKey() || p.user.id, key: accessKey() };
     save(LS.user, user);
+  }
+  const extra = p.extra && typeof p.extra === "object" ? p.extra : {};
+  if (extra.apply && typeof extra.apply === "object") {
+    apply = { ...apply, ...extra.apply };
+    save(LS.apply, apply);
+  }
+  if (extra.paid != null) {
+    paid = Boolean(extra.paid || paid);
+    save(LS.paid, paid);
   }
   if (p.cert && typeof p.cert === "object") {
     if (p.cert.saved || !cert.saved) {
@@ -2253,8 +2321,8 @@ function applyProfile(p) {
 }
 
 async function hydrateProfile() {
-  if (!hasBackend() || !userKey()) return;
-  const data = await getJson("/api/profile?userId=" + encodeURIComponent(userKey()));
+  if (!hasBackend() || !accessKey()) return;
+  const data = await getJson("/edu/api/profile?key=" + encodeURIComponent(accessKey()));
   if (data && data.profile) applyProfile(data.profile);
 }
 
