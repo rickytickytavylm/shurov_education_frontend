@@ -70,7 +70,7 @@ let kira = (load(LS.kira, [
     id: "k0",
     name: "Кира AI",
     me: false,
-    text: "Здравствуйте. Я Кира — куратор кабинета. Знаю Старт, модуль 1, 14 схем и задания. Разберу лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда. Если опасно: 112 и очная помощь.",
+    text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модуль 1. Если опасно: 112 и очная помощь.",
   },
 ]) || []).filter((m) => m && m.id !== "think" && m.text !== "Формирую ответ...");
 let toolState = load(LS.tools, {
@@ -701,12 +701,12 @@ function loginHtml() {
         <a class="brand" href="#/">${brandHtml()}</a>
         <a class="text-link" href="#/">на стартовую</a>
       </header>
-      <div class="flow-main">
+      <div class="flow-main login-main">
         <p class="eye">Личный кабинет</p>
-        <h1>Войти по ключу</h1>
-        <p class="lead">Введите личный ключ, который вам прислала команда курса.</p>
+        <h1>Вход по ключу</h1>
+        <p class="lead">Ключ присылает команда курса. Один ключ открывает кабинет одного участника.</p>
         <form class="stack-form" id="loginForm">
-          <label>ключ доступа<input name="key" type="password" required autocomplete="current-password" placeholder="Ваш именной ключ" /></label>
+          <label>ключ доступа<input name="key" type="text" required autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Вставьте ключ из письма" /></label>
           <p class="form-err" id="loginErr" hidden>Этот ключ не подходит. Проверьте письмо или напишите куратору.</p>
           <button class="btn" type="submit">войти</button>
         </form>
@@ -717,10 +717,11 @@ function loginHtml() {
 function helloHtml() {
   return `
     <div class="flow hello-flow">
-      <div class="flow-main">
+      <div class="flow-main hello-main">
         <p class="eye">Школа доктора Шурова</p>
-        <h1>Здравствуйте, ${esc(user && user.name ? user.name : "")}</h1>
-        <p class="lead">Открываем ваш кабинет.</p>
+        <p class="hello-mark">Вы ввели ключ команды доктора Шурова</p>
+        <h1>Добро пожаловать на платформу курса</h1>
+        <p class="hello-course">«Любить, не теряя себя»</p>
       </div>
     </div>`;
 }
@@ -1217,7 +1218,7 @@ function guideHtml() {
         <ul class="guide-list">
           <li>4 авторские видеолекции Василия Шурова</li>
           <li>Практические задания после каждой темы</li>
-          <li>4 закрытые встречи с психологами в Zoom</li>
+          <li>4 закрытые фокус-группы с психологами</li>
           <li>2 индивидуальные консультации</li>
           <li>Видеолекции, практика и разбор Киры после каждого модуля</li>
         </ul>
@@ -1303,15 +1304,17 @@ function guideHtml() {
       <div class="section-label">Поддержка</div>
       <h3>На этом пути вы не одни</h3>
       <div class="guide-team">
-        <div><b>Пикулева Екатерина Всеволодовна</b><span>психолог · +7 916 704-49-85 · @KateZhar</span></div>
-        <div><b>Родин Алексей Эрикович</b><span>психолог · +7 916 191-32-44 · @Rodin_Alexey</span></div>
-        <div><b>Голованова Екатерина Сергеевна</b><span>психолог · +7 968 040-50-05 · @katenka86</span></div>
-        <div><b>Дегтярева Ирина Васильевна</b><span>куратор · @Irina_Err</span></div>
+        <div><b>Пикулева Екатерина Всеволодовна</b><span>психолог · +7 916 704-49-85 · <a href="https://t.me/Katezhar" target="_blank" rel="noopener">@Katezhar</a></span></div>
+        <div><b>Родин Алексей Эрикович</b><span>психолог · +7 916 191-32-44 · <a href="https://t.me/Rodin_alexey" target="_blank" rel="noopener">@Rodin_alexey</a></span></div>
+        <div><b>Голованова Екатерина Сергеевна</b><span>психолог · +7 968 040-50-05 · <a href="https://t.me/katenka86" target="_blank" rel="noopener">@katenka86</a></span></div>
+        <div><b>Дегтярева Ирина Васильевна</b><span>психолог · +7 987 445-20-17 · <a href="https://t.me/Irina_Err" target="_blank" rel="noopener">@Irina_Err</a></span></div>
+        <div><b>Букреева Анна Александровна</b><span>куратор · +7 999 001-59-21 · <a href="https://t.me/Anya_Bukreeva" target="_blank" rel="noopener">@Anya_Bukreeva</a></span></div>
       </div>
       <ul class="guide-list">
-        <li>Фокус-группы проходят в Zoom без записи. Ссылка появится в чате потока.</li>
+        <li>Фокус-группы проходят без записи.</li>
+        <li>Чат потока: <a href="https://t.me/+DVMU-LUCStl4ZDVi" target="_blank" rel="noopener">открыть в Telegram</a></li>
         <li>В чате потока можно задать организационный вопрос куратору.</li>
-        <li>Telegram: <a href="https://t.me/shurovsos" target="_blank" rel="noopener">t.me/shurovsos</a></li>
+        <li>Telegram-канал: <a href="https://t.me/shurovsos" target="_blank" rel="noopener">t.me/shurovsos</a></li>
         <li>Бот в Telegram: <a href="https://tvoi-shag.online/tlgrm?bot=getcourse_shurov_bot" target="_blank" rel="noopener">открыть</a></li>
         <li>Бот в MAX: <a href="https://tvoi-shag.online/pl/maxstart?botId=794" target="_blank" rel="noopener">открыть</a></li>
       </ul>
@@ -1666,7 +1669,7 @@ function bindStart() {
 }
 
 function bindHello() {
-  setTimeout(() => go("/guide"), 1600);
+  setTimeout(() => go("/guide"), 2800);
 }
 
 function bindLogin() {
@@ -2204,6 +2207,9 @@ function localKiraReply(text) {
   }
   if (/винова|разочаров|сказать нет|границ/i.test(q)) {
     return "Границу чаще ломает не чужое давление, а вина. Первый навык: выдержать паузу после правды и не бросаться чинить чувство другого.";
+  }
+  if (/расписан|фокус|встреч|zoom|зум|куратор|чат поток|когда групп/i.test(q)) {
+    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с психологами проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+DVMU-LUCStl4ZDVi. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модуль 1.";
   }
   return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модуль 1, следующие модули скоро.";
 }

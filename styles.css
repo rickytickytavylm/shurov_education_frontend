@@ -1013,6 +1013,30 @@ html, body { background: var(--snow); color: var(--ink); }
 .flow-main::before { content: ""; position: absolute; left: -72px; top: 92px; width: 32px; height: 1px; background: var(--aura); }
 .flow-main h1 { max-width: 11ch; font-size: clamp(52px, 7vw, 86px); line-height: .92; letter-spacing: -.055em; }
 .flow-main .lead { max-width: 560px; margin-top: 22px; font-size: 16px; line-height: 1.6; }
+.login-main h1,
+.hello-main h1 { max-width: 16ch; }
+.hello-flow { min-height: 100dvh; }
+.hello-main { animation: helloIn .7s ease; }
+.hello-mark {
+  margin: 22px 0 0;
+  max-width: 28ch;
+  font-size: 17px;
+  line-height: 1.45;
+  color: rgba(246, 242, 234, .72);
+}
+.hello-main h1 { margin-top: 28px; }
+.hello-course {
+  margin-top: 22px;
+  max-width: 18ch;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.2;
+  letter-spacing: -.03em;
+  color: #e4dafd;
+}
+@keyframes helloIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
 .eye { color: var(--aura); font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; }
 .stack-form { margin-top: 44px; gap: 22px; }
 .stack-form input { min-height: 58px; font-size: 20px; }
@@ -1661,11 +1685,14 @@ html, body { background: var(--snow); color: var(--ink); }
     padding: 48px 0 72px;
   }
   .flow-main::before { display: none; }
-  .flow-main h1 {
+  .flow-main h1,
+  .login-main h1,
+  .hello-main h1 {
     max-width: none;
     font-size: clamp(32px, 9vw, 42px);
     line-height: 1.05;
   }
+  .hello-course { max-width: none; }
   .stack-form input,
   .chat-in input,
   .hw textarea,
@@ -2594,6 +2621,7 @@ body.pwa-open { overflow: hidden; }
 .guide-team > div { padding: 16px 18px; background: #f7f4ee; border-radius: 14px; }
 .guide-team b { display: block; color: var(--ink); }
 .guide-team span { color: var(--mute); font-size: 14px; }
+.guide-team a { color: #4f426c; text-underline-offset: 2px; }
 .cert-box { margin-top: 8px; scroll-margin-top: calc(108px + env(safe-area-inset-top)); }
 .cert-box.is-need {
   animation: certNeed 1s ease;
