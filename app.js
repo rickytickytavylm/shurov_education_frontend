@@ -51,38 +51,96 @@ function dockItem(href, on, icon, label, extra) {
   return `<a href="${href}" class="${on ? "on" : ""}"${extra ? " " + extra : ""}>${DOCK_ICONS[icon]}<span>${label}</span></a>`;
 }
 
+function storedKey() {
+  try {
+    const fromUser = load(LS.user, null);
+    const raw = (fromUser && fromUser.key) || localStorage.getItem(LS.key) || "";
+    return String(raw).trim();
+  } catch (_) {
+    return "";
+  }
+}
+
+function emptyTools() {
+  return {
+    whose: {},
+    script: {},
+    dual: { left: "", right: "" },
+    split: { left: "", right: "" },
+    halt: {},
+    pause: [],
+    fields: {},
+    safety: [],
+  };
+}
+
+function defaultKira() {
+  return [
+    {
+      id: "k0",
+      name: "Кира AI",
+      me: false,
+      text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модуль 1. Если опасно: 112 и очная помощь.",
+    },
+  ];
+}
+
+function wipeKeylessSession() {
+  const cookie = (() => {
+    try {
+      return localStorage.getItem("se_cookie_ok");
+    } catch (_) {
+      return "";
+    }
+  })();
+  const device = (() => {
+    try {
+      return localStorage.getItem(LS.device);
+    } catch (_) {
+      return "";
+    }
+  })();
+  Object.keys(LS).forEach((k) => {
+    if (k === "device") return;
+    try {
+      localStorage.removeItem(LS[k]);
+    } catch (_) {}
+  });
+  if (cookie) {
+    try {
+      localStorage.setItem("se_cookie_ok", cookie);
+    } catch (_) {}
+  }
+  if (device) {
+    try {
+      localStorage.setItem(LS.device, device);
+    } catch (_) {}
+  }
+}
+
+if (!storedKey()) wipeKeylessSession();
+
 let user = load(LS.user, null);
 if (user && !user.key) {
   try {
     user.key = localStorage.getItem(LS.key) || "";
   } catch (_) {}
 }
+if (!user || !String(user.key || "").trim()) {
+  wipeKeylessSession();
+  user = null;
+}
 let apply = load(LS.apply, {});
-let paid = Boolean(load(LS.paid, false) || user);
+let paid = Boolean(user && String(user.key || "").trim());
 let progress = load(LS.progress, {});
 let homework = load(LS.hw, {});
 let quizState = load(LS.quiz, {});
 let surveyState = load(LS.survey, {});
 let cert = load(LS.cert, {});
 let guideSeen = Boolean(load(LS.guide, false));
-let kira = (load(LS.kira, [
-  {
-    id: "k0",
-    name: "Кира AI",
-    me: false,
-    text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модуль 1. Если опасно: 112 и очная помощь.",
-  },
-]) || []).filter((m) => m && m.id !== "think" && m.text !== "Формирую ответ...");
-let toolState = load(LS.tools, {
-  whose: {},
-  script: {},
-  dual: { left: "", right: "" },
-  split: { left: "", right: "" },
-  halt: {},
-  pause: [],
-  fields: {},
-  safety: [],
-});
+let kira = (load(LS.kira, defaultKira()) || []).filter((m) => m && m.id !== "think" && m.text !== "Формирую ответ...");
+if (!kira.length) kira = defaultKira();
+let toolState = load(LS.tools, emptyTools()) || emptyTools();
 toolState.fields ||= {};
 toolState.safety ||= [];
 toolState.whose ||= {};
@@ -371,8 +429,17 @@ function pwaOpenBtn(label, cls) {
   return `<button class="${cls || "btn"}" type="button" data-pwa-open>${label}</button>`;
 }
 
+function hasAccess() {
+  return Boolean(user && String((user.key || accessKey() || "")).trim());
+}
+
 function route() {
   document.body.classList.remove("rail-slim");
+  if (user && !hasAccess()) {
+    wipeKeylessSession();
+    user = null;
+    paid = false;
+  }
   const { path, id } = parseHash();
   if (HOME_SECTIONS.has(path) && !id) {
     const needRender = view !== "start" || !$app.querySelector(".site");
@@ -386,7 +453,7 @@ function route() {
     return;
   }
   if (path === "lesson" && id) {
-    if (user && !onboardingDone()) {
+    if (hasAccess() && !onboardingDone()) {
       if (view !== "guide") {
         view = "guide";
         render();
@@ -398,25 +465,22 @@ function route() {
     if (opened.module && opened.module.hidden) {
       currentId = "m1-l1";
       if (location.hash !== "#/lesson/m1-l1") location.hash = "/lesson/m1-l1";
-      view = user ? "lesson" : nextPublic();
+      view = hasAccess() ? "lesson" : "login";
     } else {
       currentId = id;
-      view = user ? "lesson" : nextPublic();
+      view = hasAccess() ? "lesson" : "login";
     }
   } else if (path === "tools") {
-    view = user ? (onboardingDone() ? "lesson" : "guide") : nextPublic();
+    view = hasAccess() ? (onboardingDone() ? "lesson" : "guide") : "login";
   } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library") {
-    view = user ? path : nextPublic();
+    view = hasAccess() ? path : "login";
   } else if (path === "hello") {
-    view = user ? "hello" : "login";
+    view = hasAccess() ? "hello" : "login";
   } else if (path === "login") {
-    if (user) view = "guide";
+    if (hasAccess()) view = "guide";
     else view = "login";
-  } else if (path === "apply") {
-    view = user ? "guide" : "login";
-  } else if (path === "pay") {
-    if (paid && user) view = "guide";
-    else view = applyDone() || user ? "pay" : "apply";
+  } else if (path === "apply" || path === "pay") {
+    view = hasAccess() ? "guide" : "login";
   } else {
     view = "start";
   }
@@ -427,8 +491,7 @@ function route() {
 }
 
 function nextPublic() {
-  if (apply.name || apply.email) return "apply";
-  return "start";
+  return "login";
 }
 
 function pendingHtml(text) {
@@ -1657,7 +1720,7 @@ function deviceId() {
 
 function bindStart() {
   const goLogin = () => go("/login");
-  const goCourse = () => go(user ? "/guide" : "/login");
+  const goCourse = () => go(hasAccess() ? "/guide" : "/login");
   const login = document.getElementById("toLogin");
   const applyBtn = document.getElementById("toApply");
   const courseNav = document.getElementById("toCourseNav");
@@ -1741,25 +1804,14 @@ function bindApply() {
     }
     apply = { ...applyDraft };
     save(LS.apply, apply);
-    user = {
-      id: "u-" + String(apply.name || "guest").toLowerCase(),
-      name: apply.name || "Слушатель",
-      email: "",
-    };
-    save(LS.user, user);
-    paid = true;
-    save(LS.paid, true);
-    await post("/apply", { user, apply });
-    await hydrateProfile();
-    await syncProfile();
-    go("/guide");
+    go("/login");
   };
 }
 
 function bindPay() {
   document.getElementById("payStub").onclick = async () => {
-    if (!user) {
-      go("/apply");
+    if (!hasAccess()) {
+      go("/login");
       return;
     }
     paid = true;
