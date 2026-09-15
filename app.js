@@ -38,7 +38,11 @@ const load = (k, fallback) => {
     return fallback;
   }
 };
-const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const save = (k, v) => {
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch (_) {}
+};
 
 const DOCK_ICONS = {
   home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 10.8 12 4.4l7.5 6.4V20a.8.8 0 0 1-.8.8h-4.7v-6.2H10v6.2H5.3a.8.8 0 0 1-.8-.8z"/></svg>',
@@ -407,8 +411,9 @@ function parseHash() {
 }
 
 function go(path) {
-  if (location.hash !== "#" + path) location.hash = path;
-  else route();
+  const next = path.charAt(0) === "#" ? path : "#" + path;
+  if (location.hash !== next) location.hash = next;
+  route();
 }
 
 const HOME_SECTIONS = new Set(["top", "how", "app-install", "free", "program", "doctor"]);
@@ -757,6 +762,18 @@ function startHtml() {
     </div>`;
 }
 
+function isTelegramWebview() {
+  const ua = navigator.userAgent || "";
+  return /Telegram/i.test(ua) || Boolean(window.TelegramWebviewProxy) || Boolean(window.Telegram && window.Telegram.WebView);
+}
+
+function cleanKey(raw) {
+  return String(raw || "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
 function loginHtml() {
   return `
     <div class="flow">
@@ -768,10 +785,11 @@ function loginHtml() {
         <p class="eye">Личный кабинет</p>
         <h1>Вход по ключу</h1>
         <p class="lead">Ключ присылает команда курса. Один ключ открывает кабинет одного участника.</p>
+        ${isTelegramWebview() ? `<p class="tg-hint">Вы внутри Telegram. Если вход зависнет, нажмите <b>⋯</b> вверху и откройте сайт в Safari или Chrome.</p>` : ""}
         <form class="stack-form" id="loginForm">
-          <label>ключ доступа<input name="key" type="text" required autocomplete="off" spellcheck="false" autocapitalize="off" placeholder="Вставьте ключ из письма" /></label>
+          <label>ключ доступа<input name="key" type="text" required autocomplete="off" spellcheck="false" autocapitalize="off" inputmode="text" placeholder="Вставьте ключ из письма" /></label>
           <p class="form-err" id="loginErr" hidden>Этот ключ не подходит. Проверьте письмо или напишите куратору.</p>
-          <button class="btn" type="submit">войти</button>
+          <button class="btn" type="submit" id="loginSend">войти</button>
         </form>
       </div>
     </div>`;
@@ -1740,21 +1758,36 @@ function bindLogin() {
   if (!form) return;
   form.onsubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     const fd = new FormData(form);
-    const key = String(fd.get("key") || "").trim();
+    const key = cleanKey(fd.get("key"));
     const err = document.getElementById("loginErr");
+    const send = document.getElementById("loginSend") || form.querySelector("button[type='submit']");
     if (!key) return;
-    const send = form.querySelector("button[type='submit']");
-    if (send) send.disabled = true;
-    const data = await post("/edu/api/login", { key, deviceId: deviceId() });
-    if (!data || !data.ok || !data.user) {
+    if (err) err.hidden = true;
+    if (send) {
+      send.disabled = true;
+      send.textContent = "проверяю ключ…";
+    }
+    const result = await requestJson("/edu/api/login", { key, deviceId: deviceId() }, 12000);
+    const data = result.data;
+    if (!result.ok || !data || !data.user) {
       if (err) {
         err.hidden = false;
-        err.textContent = hasBackend()
-          ? "Этот ключ не подходит. Проверьте письмо или напишите куратору."
-          : "Сервер входа пока недоступен. Попробуйте чуть позже.";
+        if (result.status === 403 || data?.error === "invalid_key") {
+          err.textContent = "Этот ключ не подходит. Проверьте письмо или напишите куратору.";
+        } else if (result.status === 429) {
+          err.textContent = "Слишком много попыток. Подождите минуту и попробуйте снова.";
+        } else {
+          err.textContent = isTelegramWebview()
+            ? "Сервер не ответил во встроенном окне Telegram. Нажмите ⋯ и откройте сайт в Safari или Chrome."
+            : "Сервер входа не ответил. Обновите страницу и попробуйте ещё раз.";
+        }
       }
-      if (send) send.disabled = false;
+      if (send) {
+        send.disabled = false;
+        send.textContent = "войти";
+      }
       return;
     }
     user = { id: data.user.id, name: data.user.name, key };
@@ -1765,7 +1798,7 @@ function bindLogin() {
     paid = true;
     save(LS.paid, true);
     if (data.profile) applyProfile(data.profile);
-    await syncProfile();
+    syncProfile();
     go("/hello");
   };
 }
@@ -2367,9 +2400,9 @@ function profilePayload() {
   };
 }
 
-async function post(path, body, ms) {
-  if (!hasBackend()) return null;
-  const wait = Number(ms) > 0 ? Number(ms) : /chat|homework-review/.test(path) ? 75000 : 20000;
+async function requestJson(path, body, ms) {
+  if (!hasBackend()) return { ok: false, status: 0, data: null, error: "no_backend" };
+  const wait = Number(ms) > 0 ? Number(ms) : /chat|homework-review/.test(path) ? 75000 : 15000;
   const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), wait) : null;
   try {
@@ -2378,15 +2411,23 @@ async function post(path, body, ms) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {}),
       signal: ctrl ? ctrl.signal : undefined,
+      credentials: "omit",
+      cache: "no-store",
     });
-    if (!res.ok) return null;
     const ct = res.headers.get("content-type") || "";
-    return ct.includes("application/json") ? res.json() : null;
-  } catch {
-    return null;
+    const data = ct.includes("application/json") ? await res.json().catch(() => null) : null;
+    return { ok: res.ok, status: res.status, data, error: (data && data.error) || "" };
+  } catch (err) {
+    return { ok: false, status: 0, data: null, error: err && err.name === "AbortError" ? "timeout" : "network" };
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+async function post(path, body, ms) {
+  const result = await requestJson(path, body, ms);
+  if (!result.ok || !result.data) return null;
+  return result.data;
 }
 
 async function getJson(path) {
@@ -2660,10 +2701,8 @@ if (course && $app) {
   bindCookie();
   bindPwa();
   bindRailHide();
-  (async () => {
-    if (user) await hydrateProfile();
-    route();
-  })();
+  route();
+  if (hasAccess()) hydrateProfile();
 } else if ($app) {
   $app.innerHTML = `<div class="flow"><div class="flow-main"><p class="eye">Кабинет</p><h1>Файлы курса не загрузились</h1><p class="lead">Обновите страницу с главной ссылки сайта. Демо работает без сервера, в браузере.</p></div></div>`;
   bindCookie();
