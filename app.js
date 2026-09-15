@@ -530,10 +530,14 @@ function pinAppShell() {
     const vv = window.visualViewport;
     const layout = window.innerHeight || 0;
     const visual = vv ? vv.height : layout;
-    const keyboard = layout - visual > 120;
+    const offset = vv ? vv.offsetTop : 0;
+    const keyboard = layout - visual > 80;
+    const kira = document.body.classList.contains("is-kira");
     document.body.classList.toggle("kb-open", keyboard);
-    const h = Math.round((keyboard ? layout : visual || layout) || 0);
+    const h = Math.round((kira ? visual || layout : keyboard ? layout : visual || layout) || 0);
     if (h) document.documentElement.style.setProperty("--app-h", h + "px");
+    document.documentElement.style.setProperty("--vv-top", kira ? Math.round(offset) + "px" : "0px");
+    if (kira) window.scrollTo(0, 0);
     const theme = document.querySelector('meta[name="theme-color"]');
     if (theme) theme.setAttribute("content", document.querySelector(".app") ? "#f7f4ee" : "#17151b");
   };
@@ -582,9 +586,34 @@ function kiraMsgHtml(m) {
 function scrollKiraLatest() {
   const log = document.getElementById("kiraLog");
   if (!log) return;
-  const last = log.lastElementChild;
-  if (last) last.scrollIntoView({ block: "nearest", inline: "nearest" });
-  log.scrollTo({ top: log.scrollHeight, behavior: "smooth" });
+  log.scrollTop = log.scrollHeight;
+}
+
+function setKiraLive(id, opts) {
+  opts = opts || {};
+  const log = document.getElementById("kiraLog");
+  if (!log) return;
+  let el = log.querySelector('[data-id="' + id + '"]');
+  if (!el) {
+    log.insertAdjacentHTML("beforeend", kiraMsgHtml({
+      id,
+      name: "Кира AI",
+      me: false,
+      think: Boolean(opts.think) && !opts.text,
+      text: opts.text || "",
+    }));
+    scrollKiraLatest();
+    return;
+  }
+  const bubble = el.querySelector(".bubble");
+  if (opts.think && !opts.text) {
+    el.classList.add("is-think");
+    if (bubble) bubble.innerHTML = '<span class="reply-dots" aria-hidden="true"><i></i><i></i><i></i></span>';
+  } else {
+    el.classList.remove("is-think");
+    if (bubble) bubble.textContent = opts.text || "";
+  }
+  scrollKiraLatest();
 }
 
 function render(opts) {
@@ -2184,6 +2213,19 @@ function bindKira() {
   };
   if (box) {
     box.addEventListener("input", grow);
+    box.addEventListener("focus", () => {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        pinAppShell();
+        scrollKiraLatest();
+      });
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        pinAppShell();
+        scrollKiraLatest();
+      }, 280);
+    });
+    box.addEventListener("blur", () => setTimeout(pinAppShell, 120));
     box.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -2208,31 +2250,30 @@ let kiraBusy = false;
 async function askKira(text) {
   if (kiraBusy) return;
   kiraBusy = true;
+  const replyId = "k" + Date.now() + "a";
   try {
     const q = String(text || "").trim() || "Демо-вопрос";
     const mine = { id: "k" + Date.now(), name: (user && user.name) || "Вы", me: true, text: q };
-    const think = { id: "think", name: "Кира AI", me: false, think: true, text: "" };
     kira.push(mine);
     save(LS.kira, kira.filter((m) => m.id !== "think"));
     const log = document.getElementById("kiraLog");
     if (log) {
       log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
-      log.insertAdjacentHTML("beforeend", kiraMsgHtml(think));
-      scrollKiraLatest();
+      setKiraLive(replyId, { think: true });
     } else {
-      kira.push(think);
       render();
+      setKiraLive(replyId, { think: true });
     }
-    const reply = { id: "k" + Date.now() + "a", name: "Кира AI", me: false, text: await liveKiraReply(q) };
-    kira = kira.filter((m) => m.id !== "think");
-    kira.push(reply);
+    let acc = "";
+    const streamed = await streamKiraReply(q, (full) => {
+      acc = full;
+      setKiraLive(replyId, { text: full });
+    });
+    const finalText = String(streamed || acc || localKiraReply(q)).trim();
+    kira = kira.filter((m) => m.id !== "think" && m.id !== replyId);
+    kira.push({ id: replyId, name: "Кира AI", me: false, text: finalText });
     save(LS.kira, kira);
-    const live = document.getElementById("kiraLog");
-    const thinkEl = live && live.querySelector('[data-id="think"]');
-    if (thinkEl) thinkEl.outerHTML = kiraMsgHtml(reply);
-    else if (live) live.insertAdjacentHTML("beforeend", kiraMsgHtml(reply));
-    else render();
-    scrollKiraLatest();
+    setKiraLive(replyId, { text: finalText });
   } finally {
     kiraBusy = false;
   }
@@ -2274,6 +2315,69 @@ async function liveKiraReply(text) {
   });
   if (data && data.reply) return data.reply;
   return localKiraReply(text);
+}
+
+async function streamKiraReply(text, onDelta) {
+  if (!hasBackend()) return localKiraReply(text);
+  const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 75000) : null;
+  try {
+    const res = await fetch(api + "/edu/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+      },
+      body: JSON.stringify({
+        key: accessKey(),
+        accessKey: accessKey(),
+        deviceId: deviceId(),
+        stream: true,
+        messages: kiraHistory(),
+        context: kiraContext(),
+      }),
+      signal: ctrl ? ctrl.signal : undefined,
+      credentials: "omit",
+      cache: "no-store",
+    });
+    if (!res.ok || !res.body) return liveKiraReply(text);
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = "";
+    let full = "";
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      buf += dec.decode(chunk.value, { stream: true });
+      const parts = buf.split("\n\n");
+      buf = parts.pop() || "";
+      for (const block of parts) {
+        const em = block.match(/^event:\s*(.+)$/m);
+        const dm = block.match(/^data:\s*(.+)$/m);
+        if (!dm) continue;
+        let data;
+        try {
+          data = JSON.parse(dm[1]);
+        } catch {
+          continue;
+        }
+        const ev = em ? em[1].trim() : "message";
+        if (ev === "delta" && data.text) {
+          full += data.text;
+          if (typeof onDelta === "function") onDelta(full);
+        } else if (ev === "done" && data.reply) {
+          full = data.reply;
+        } else if (ev === "error") {
+          return full || null;
+        }
+      }
+    }
+    return full || null;
+  } catch {
+    return liveKiraReply(text);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 function localKiraReply(text) {

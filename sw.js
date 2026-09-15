@@ -1,9 +1,9 @@
-const CACHE = "se-cabinet-v35";
+const CACHE = "se-cabinet-v36";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=57",
-  "app.js?v=55",
+  "styles.css?v=58",
+  "app.js?v=56",
   "course.js?v=17",
   "config.js?v=6",
   "manifest.webmanifest",
