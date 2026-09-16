@@ -15,7 +15,7 @@ const LS = {
 };
 
 const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
-const START_VIDEO = "https://storage.yandexcloud.net/fidesetratio/%D0%9F%D0%9E%D0%94%D0%92%D0%9E%D0%94%D0%9A%D0%90%20%D0%92%D0%B5%D0%B1%D0%B8%D0%BD%D0%B0%D1%80%20%D0%A1%D0%9E%D0%97%D0%90%D0%92%D0%98%D0%A1%D0%98%D0%9C%D0%9E%D0%A1%D0%A2%D0%AC%20%D1%871%20%D0%98%D0%A2%D0%9E%D0%93.mp4";
+const START_VIDEO = "https://storage.yandexcloud.net/fidesetratio/podvodka.mp4";
 const INTRO_SURVEY = "m0-l3";
 const course = window.COURSE;
 const $app = document.getElementById("app");
