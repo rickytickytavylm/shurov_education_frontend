@@ -695,7 +695,6 @@ function startHtml() {
         <header class="nav">
           <a class="brand" href="#/">школа доктора шурова</a>
           <nav>
-            <a href="#welcome">подводка</a>
             <a href="#free">модуль</a>
             <a href="#app-install">приложение</a>
             <a href="#program">программа</a>
@@ -711,24 +710,12 @@ function startHtml() {
           <div class="hero-west">
             <p>Программа по созависимости: бесплатный практикум, четыре модуля и Кира AI.</p>
             <div class="chips">
-              <a href="#welcome">Обращение автора</a>
               <a href="#free">Бесплатный практикум</a>
               <a href="#app-install">Веб-приложение</a>
               <a href="#program">Учебный план</a>
               <span>Кира AI</span>
               <span>4 модуля</span>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="welcome-film" id="welcome">
-        <div class="inner">
-          <p class="kicker">Обращение автора</p>
-          <h2>Перед стартом программы</h2>
-          <p class="lead">Короткая подводка Василия Шурова к курсу «Любить, не теряя себя».</p>
-          <div class="video is-live">
-            <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/hero-4k.webp")}" src="${esc(START_VIDEO)}"></video>
           </div>
         </div>
       </section>
@@ -1340,6 +1327,9 @@ function guideHtml() {
     <p class="crumb">Старт программы</p>
     <h2>Добро пожаловать на курс</h2>
     <p class="lede">Здесь начинается путь от жизни вокруг чужих проблем — к спокойствию, ясным границам и возвращению себя. Перед первым уроком познакомьтесь с форматом программы и заполните вводную анкету.</p>
+    <div class="video is-live">
+      <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/hero-4k.webp")}" src="${esc(START_VIDEO)}"></video>
+    </div>
 
     <section class="guide-feat">
       ${guideShot("assets/guide-path.webp", "Курс как путь")}
@@ -1521,6 +1511,7 @@ function bindGuide() {
     };
   }
   bindSurvey(findLesson(INTRO_SURVEY).lesson);
+  protectLessonVideo();
 }
 
 function libraryHtml() {
