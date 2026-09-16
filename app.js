@@ -15,6 +15,7 @@ const LS = {
 };
 
 const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
+const START_VIDEO = "https://storage.yandexcloud.net/fidesetratio/%D0%9F%D0%9E%D0%94%D0%92%D0%9E%D0%94%D0%9A%D0%90%20%D0%92%D0%B5%D0%B1%D0%B8%D0%BD%D0%B0%D1%80%20%D0%A1%D0%9E%D0%97%D0%90%D0%92%D0%98%D0%A1%D0%98%D0%9C%D0%9E%D0%A1%D0%A2%D0%AC%20%D1%871%20%D0%98%D0%A2%D0%9E%D0%93.mp4";
 const INTRO_SURVEY = "m0-l3";
 const course = window.COURSE;
 const $app = document.getElementById("app");
@@ -526,29 +527,32 @@ function setScrollY(y, behavior) {
 }
 
 function pinAppShell() {
-  const set = () => {
+  const apply = () => {
     const vv = window.visualViewport;
     const layout = window.innerHeight || 0;
     const visual = vv ? vv.height : layout;
-    const offset = vv ? vv.offsetTop : 0;
-    const keyboard = layout - visual > 80;
+    const offsetTop = vv ? vv.offsetTop : 0;
+    const inset = Math.max(0, Math.round(layout - visual - offsetTop));
     const kira = document.body.classList.contains("is-kira");
+    const keyboard = kira && inset > 80;
     document.body.classList.toggle("kb-open", keyboard);
-    const h = Math.round((kira ? visual || layout : keyboard ? layout : visual || layout) || 0);
-    if (h) document.documentElement.style.setProperty("--app-h", h + "px");
-    document.documentElement.style.setProperty("--vv-top", kira ? Math.round(offset) + "px" : "0px");
-    if (kira) window.scrollTo(0, 0);
+    document.documentElement.style.removeProperty("--app-h");
+    document.documentElement.style.removeProperty("--vv-top");
+    if (keyboard) {
+      document.documentElement.style.setProperty("--kb-inset", inset + "px");
+    } else {
+      document.documentElement.style.removeProperty("--kb-inset");
+    }
     const theme = document.querySelector('meta[name="theme-color"]');
     if (theme) theme.setAttribute("content", document.querySelector(".app") ? "#f7f4ee" : "#17151b");
   };
-  set();
+  apply();
   if (window.SE_VV_BOUND) return;
   window.SE_VV_BOUND = true;
-  window.addEventListener("resize", set, { passive: true });
-  window.addEventListener("orientationchange", set);
+  window.addEventListener("resize", pinAppShell, { passive: true });
+  window.addEventListener("orientationchange", pinAppShell);
   if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", set);
-    window.visualViewport.addEventListener("scroll", set);
+    window.visualViewport.addEventListener("resize", pinAppShell, { passive: true });
   }
 }
 
@@ -691,6 +695,7 @@ function startHtml() {
         <header class="nav">
           <a class="brand" href="#/">школа доктора шурова</a>
           <nav>
+            <a href="#welcome">подводка</a>
             <a href="#free">модуль</a>
             <a href="#app-install">приложение</a>
             <a href="#program">программа</a>
@@ -706,12 +711,24 @@ function startHtml() {
           <div class="hero-west">
             <p>Программа по созависимости: бесплатный практикум, четыре модуля и Кира AI.</p>
             <div class="chips">
+              <a href="#welcome">Обращение автора</a>
               <a href="#free">Бесплатный практикум</a>
               <a href="#app-install">Веб-приложение</a>
               <a href="#program">Учебный план</a>
               <span>Кира AI</span>
               <span>4 модуля</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="welcome-film" id="welcome">
+        <div class="inner">
+          <p class="kicker">Обращение автора</p>
+          <h2>Перед стартом программы</h2>
+          <p class="lead">Короткая подводка Василия Шурова к курсу «Любить, не теряя себя».</p>
+          <div class="video is-live">
+            <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/hero-4k.webp")}" src="${esc(START_VIDEO)}"></video>
           </div>
         </div>
       </section>
@@ -827,6 +844,11 @@ function loginHtml() {
 function helloHtml() {
   return `
     <div class="flow hello-flow">
+      <picture class="hello-pic">
+        <source media="(max-width: 720px)" srcset="${asset("assets/hello-mobile.jpg")}" />
+        <img class="hello-bg" src="${asset("assets/hello-desktop.jpg")}" alt="" />
+      </picture>
+      <div class="hello-shade"></div>
       <div class="flow-main hello-main">
         <p class="eye">Школа доктора Шурова</p>
         <p class="hello-mark">Вы ввели ключ команды доктора Шурова</p>
@@ -1545,7 +1567,7 @@ function kiraHtml() {
       <div class="chat-log" id="kiraLog">${msgs}</div>
       <form class="chat-in gpt-in" id="kiraForm">
         <div class="gpt-box">
-          <textarea name="text" rows="1" autocomplete="off" placeholder="Спросите что угодно"></textarea>
+          <textarea name="text" rows="1" autocomplete="off" enterkeyhint="enter" inputmode="text" placeholder="Спросите что угодно"></textarea>
           <button class="gpt-send" type="submit" aria-label="Отправить">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0-12 5 5m-5-5-5 5M6 20h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -1776,6 +1798,7 @@ function bindStart() {
   document.querySelectorAll("#toCourse").forEach((el) => { el.onclick = goCourse; });
   document.querySelectorAll("#toFree").forEach((el) => { el.onclick = goCourse; });
   if (courseNav) courseNav.onclick = goCourse;
+  protectLessonVideo();
 }
 
 function bindHello() {
@@ -2213,24 +2236,12 @@ function bindKira() {
   };
   if (box) {
     box.addEventListener("input", grow);
-    box.addEventListener("focus", () => {
-      requestAnimationFrame(() => {
-        window.scrollTo(0, 0);
-        pinAppShell();
-        scrollKiraLatest();
-      });
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        pinAppShell();
-        scrollKiraLatest();
-      }, 280);
-    });
-    box.addEventListener("blur", () => setTimeout(pinAppShell, 120));
     box.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        form.requestSubmit();
-      }
+      if (e.key !== "Enter") return;
+      const mobile = window.matchMedia("(max-width: 720px)").matches;
+      if (mobile || e.shiftKey) return;
+      e.preventDefault();
+      form.requestSubmit();
     });
     grow();
   }

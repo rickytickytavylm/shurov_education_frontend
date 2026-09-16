@@ -1,14 +1,16 @@
-const CACHE = "se-cabinet-v36";
+const CACHE = "se-cabinet-v37";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=58",
-  "app.js?v=56",
+  "styles.css?v=59",
+  "app.js?v=57",
   "course.js?v=17",
   "config.js?v=6",
   "manifest.webmanifest",
   "assets/hero-4k.webp",
   "assets/hero-mobile.webp",
+  "assets/hello-desktop.jpg",
+  "assets/hello-mobile.jpg",
   "assets/free-module.webp",
   "assets/free-module-mobile.webp",
   "assets/shurov.webp",
