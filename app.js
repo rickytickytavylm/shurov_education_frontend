@@ -1311,10 +1311,10 @@ function guideHtml() {
     <section class="guide-film">
       <p class="section-label">Обращение автора</p>
       <h3>Слово Василия Шурова перед стартом</h3>
-      <p class="lede">Короткое видео о том, как устроен курс и с чем вы входите в программу.</p>
       <div class="video is-live">
         <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/podvodka-poster.jpg")}" src="${esc(START_VIDEO)}"></video>
       </div>
+      <p class="lede">Короткое видео о том, как устроен курс и с чем вы входите в программу. Дальше на этой странице маршрут, Кира и вводная анкета.</p>
     </section>
 
     <section class="guide-feat">
