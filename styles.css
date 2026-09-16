@@ -2697,6 +2697,49 @@ body.pwa-open { overflow: hidden; }
 }
 
 /* Guide «Как всё устроено», library, final verdict */
+.guide-film {
+  margin: 8px 0 72px;
+  padding: 22px 22px 24px;
+  background: #17151b;
+  border-radius: 20px;
+  color: #f6f2ea;
+}
+.guide-film .section-label {
+  margin: 0 0 8px;
+  color: #e4dafd;
+}
+.guide-film h3 {
+  max-width: 16ch;
+  margin: 0 0 10px;
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.12;
+  letter-spacing: -.03em;
+  color: #f6f2ea;
+}
+.guide-film .lede {
+  max-width: 36em;
+  margin: 0 0 20px;
+  color: rgba(246, 242, 234, .68);
+}
+.guide-film .video {
+  margin: 0;
+  border: 0;
+  border-radius: 14px;
+  background: #111015;
+}
+.guide-film .video.is-live video {
+  object-fit: cover;
+  background: #111015;
+}
+@media (max-width: 720px) {
+  .guide-film {
+    margin: 4px 0 56px;
+    padding: 16px 14px 14px;
+    border-radius: 16px;
+  }
+  .guide-film h3 { max-width: none; }
+  .guide-film .lede { margin-bottom: 14px; }
+}
 .guide-feat {
   display: grid;
   gap: 20px;

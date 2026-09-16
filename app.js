@@ -1307,9 +1307,15 @@ function guideHtml() {
     <p class="crumb">Старт программы</p>
     <h2>Добро пожаловать на курс</h2>
     <p class="lede">Здесь начинается путь от жизни вокруг чужих проблем — к спокойствию, ясным границам и возвращению себя. Перед первым уроком познакомьтесь с форматом программы и заполните вводную анкету.</p>
-    <div class="video is-live">
-      <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/hero-4k.webp")}" src="${esc(START_VIDEO)}"></video>
-    </div>
+
+    <section class="guide-film">
+      <p class="section-label">Обращение автора</p>
+      <h3>Слово Василия Шурова перед стартом</h3>
+      <p class="lede">Короткое видео о том, как устроен курс и с чем вы входите в программу.</p>
+      <div class="video is-live">
+        <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/podvodka-poster.jpg")}" src="${esc(START_VIDEO)}"></video>
+      </div>
+    </section>
 
     <section class="guide-feat">
       ${guideShot("assets/guide-path.webp", "Курс как путь")}
