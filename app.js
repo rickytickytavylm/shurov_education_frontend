@@ -669,14 +669,15 @@ function render(opts) {
 
 function startHtml() {
   const mods = course.modules
+    .filter((m) => m && !m.hidden)
     .map(
-      (m) => `<li class="module-card${m.free ? " is-free" : ""}">
+      (m) => `<li class="module-card">
         <span class="module-index">${String(m.n).padStart(2, "0")}</span>
         <div>
           <h3>${esc(m.title)}</h3>
           <p>${esc(m.blurb)}</p>
         </div>
-        <span class="module-time">${m.free ? "бесплатно" : m.final ? "тест" : "вебинар " + m.n}</span>
+        <span class="module-time">${m.final ? "тест" : "вебинар " + m.n}</span>
       </li>`
     )
     .join("");
@@ -695,7 +696,6 @@ function startHtml() {
         <header class="nav">
           <a class="brand" href="#/">школа доктора шурова</a>
           <nav>
-            <a href="#free">модуль</a>
             <a href="#app-install">приложение</a>
             <a href="#program">программа</a>
             <a href="#doctor">автор</a>
@@ -708,9 +708,8 @@ function startHtml() {
             ${heroCta}
           </div>
           <div class="hero-west">
-            <p>Программа по созависимости: бесплатный практикум, четыре модуля и Кира AI.</p>
+            <p>Программа по созависимости: четыре модуля и Кира AI.</p>
             <div class="chips">
-              <a href="#free">Бесплатный практикум</a>
               <a href="#app-install">Веб-приложение</a>
               <a href="#program">Учебный план</a>
               <span>Кира AI</span>
@@ -723,35 +722,16 @@ function startHtml() {
       <section class="strip" id="how">
         <div class="inner">
           <p><b>Кира AI</b><span>Персональный AI-помощник и разбор заданий</span></p>
-          <p><b>Вводный практикум</b><span>Понятие созависимости, разбор одного дня и анкета</span></p>
+          <p><b>Старт в кабинете</b><span>Обращение автора, анкета и данные участника</span></p>
           <p><b>4 модуля программы</b><span>Лекции, практика и проверки</span></p>
-        </div>
-      </section>
-
-      <section class="free-mod" id="free">
-        <picture>
-          <source media="(max-width: 720px)" srcset="${asset("assets/free-module-mobile.webp")}?v=1" type="image/webp" />
-          <img class="free-mod-bg" src="${asset("assets/free-module.webp")}?v=2" alt="" />
-        </picture>
-        <div class="free-mod-shade"></div>
-        <div class="free-mod-copy">
-          <p class="kicker">Вводный практикум · около 40 минут</p>
-          <h2>Понятие созависимости</h2>
-          <p class="free-mod-lead">Бесплатный вводный блок до основной программы: что мы называем созависимостью, как это выглядит в обычный вечер, анкета запроса и короткая проверка с разбором от Киры AI.</p>
-          <ul class="free-mod-list">
-            <li>Что такое созависимость простыми словами: привычка, а не дефект характера</li>
-            <li>Как увидеть сценарий отношений в одном конкретном вечере, без самообвинения</li>
-            <li>Короткая проверка и анкета запроса перед четырьмя модулями курса</li>
-          </ul>
-          <button class="btn light" type="button" id="${user ? "toCourse" : "toFree"}">Войти в кабинет</button>
         </div>
       </section>
 
       <section class="block violet" id="program">
         <div class="inner">
           <div class="program-head">
-            <div><p class="kicker">Учебный план</p><h2>Вводный модуль и четыре ступени курса</h2></div>
-            <p>После входа по личному ключу открываются все материалы: вводный практикум, четыре модуля, итоговый тест, анкеты и Кира AI.</p>
+            <div><p class="kicker">Учебный план</p><h2>Четыре ступени курса</h2></div>
+            <p>После входа по личному ключу открываются четыре модуля, итоговый тест, анкеты и Кира AI.</p>
           </div>
           <ol class="mods">${mods}</ol>
         </div>
@@ -899,7 +879,7 @@ function payHtml() {
       <div class="flow-main">
         <p class="eye">Полный доступ к программе</p>
         <h1>Активация четырех модулей</h1>
-        <p class="lead">Вводный практикум открыт бесплатно. Активация открывает четыре модуля программы, практические инструменты и 14 схем отношений. Модули проходятся по порядку, шаг за шагом.</p>
+        <p class="lead">Активация открывает четыре модуля программы, практические инструменты и 14 схем отношений. Модули проходятся по порядку, шаг за шагом.</p>
         <ul class="pay-points">
           <li>${esc(name)}</li>
           <li>${esc(email)}</li>
@@ -1340,7 +1320,7 @@ function guideHtml() {
         <ul class="guide-list">
           <li>4 авторские видеолекции Василия Шурова</li>
           <li>Практические задания после каждой темы</li>
-          <li>4 закрытые фокус-группы с психологами</li>
+          <li>4 закрытые фокус-группы с экспертами школы</li>
           <li>2 индивидуальные консультации</li>
           <li>Видеолекции, практика и разбор Киры после каждого модуля</li>
         </ul>
@@ -1426,10 +1406,10 @@ function guideHtml() {
       <div class="section-label">Поддержка</div>
       <h3>На этом пути вы не одни</h3>
       <div class="guide-team">
-        <div><b>Пикулева Екатерина Всеволодовна</b><span>психолог · +7 916 704-49-85 · <a href="https://t.me/Katezhar" target="_blank" rel="noopener">@Katezhar</a></span></div>
-        <div><b>Родин Алексей Эрикович</b><span>психолог · +7 916 191-32-44 · <a href="https://t.me/Rodin_alexey" target="_blank" rel="noopener">@Rodin_alexey</a></span></div>
-        <div><b>Голованова Екатерина Сергеевна</b><span>психолог · +7 968 040-50-05 · <a href="https://t.me/katenka86" target="_blank" rel="noopener">@katenka86</a></span></div>
-        <div><b>Дегтярева Ирина Васильевна</b><span>психолог · +7 987 445-20-17 · <a href="https://t.me/Irina_Err" target="_blank" rel="noopener">@Irina_Err</a></span></div>
+        <div><b>Пикулева Екатерина Всеволодовна</b><span>эксперт школы · +7 916 704-49-85 · <a href="https://t.me/Katezhar" target="_blank" rel="noopener">@Katezhar</a></span></div>
+        <div><b>Родин Алексей Эрикович</b><span>эксперт школы · +7 916 191-32-44 · <a href="https://t.me/Rodin_alexey" target="_blank" rel="noopener">@Rodin_alexey</a></span></div>
+        <div><b>Голованова Екатерина Сергеевна</b><span>эксперт школы · +7 968 040-50-05 · <a href="https://t.me/katenka86" target="_blank" rel="noopener">@katenka86</a></span></div>
+        <div><b>Дегтярева Ирина Васильевна</b><span>эксперт школы · +7 987 445-20-17 · <a href="https://t.me/Irina_Err" target="_blank" rel="noopener">@Irina_Err</a></span></div>
         <div><b>Букреева Анна Александровна</b><span>куратор · +7 999 001-59-21 · <a href="https://t.me/Anya_Bukreeva" target="_blank" rel="noopener">@Anya_Bukreeva</a></span></div>
       </div>
       <ul class="guide-list">
@@ -2400,7 +2380,7 @@ function localKiraReply(text) {
     return "Границу чаще ломает не чужое давление, а вина. Первый навык: выдержать паузу после правды и не бросаться чинить чувство другого.";
   }
   if (/расписан|фокус|встреч|zoom|зум|куратор|чат поток|когда групп/i.test(q)) {
-    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с психологами проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+DVMU-LUCStl4ZDVi. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модуль 1.";
+    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с экспертами школы проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+DVMU-LUCStl4ZDVi. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модуль 1.";
   }
   return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модуль 1, следующие модули скоро.";
 }
