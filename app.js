@@ -1889,23 +1889,68 @@ function bindHello() {
   setTimeout(() => go("/guide"), 2800);
 }
 
+function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function readLoginKey(form) {
+  const input = form.querySelector("input[name='key']");
+  return cleanKey(input ? input.value : new FormData(form).get("key"));
+}
+
+function wakeEduApi() {
+  if (!hasBackend()) return;
+  fetch(api + "/healthz", { method: "GET", cache: "no-store", credentials: "omit", mode: "cors" }).catch(() => {});
+}
+
+async function loginRequest(key) {
+  const body = { key, deviceId: deviceId() };
+  let result = await requestJson("/edu/api/login", body, 25000);
+  if (!result.ok && result.status !== 403 && result.status !== 429) {
+    await waitMs(400);
+    result = await requestJson("/edu/api/login", body, 25000);
+  }
+  return result;
+}
+
 function bindLogin() {
   const form = document.getElementById("loginForm");
   if (!form) return;
+  const input = form.querySelector("input[name='key']");
+  let busy = false;
+  wakeEduApi();
   form.onsubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const fd = new FormData(form);
-    const key = cleanKey(fd.get("key"));
+    if (busy) return;
+    if (input) input.blur();
+    await waitMs(60);
+    let key = readLoginKey(form);
+    if (!key) {
+      await waitMs(120);
+      key = readLoginKey(form);
+    }
     const err = document.getElementById("loginErr");
     const send = document.getElementById("loginSend") || form.querySelector("button[type='submit']");
-    if (!key) return;
+    if (!key) {
+      if (err) {
+        err.hidden = false;
+        err.textContent = "Вставьте ключ в поле и нажмите войти.";
+      }
+      return;
+    }
+    busy = true;
     if (err) err.hidden = true;
     if (send) {
       send.disabled = true;
       send.textContent = "проверяю ключ…";
     }
-    const result = await requestJson("/edu/api/login", { key, deviceId: deviceId() }, 12000);
+    let result = await loginRequest(key);
+    const keyNow = readLoginKey(form);
+    if (!result.ok && result.status === 403 && keyNow && keyNow !== key) {
+      result = await loginRequest(keyNow);
+      key = keyNow;
+    }
     const data = result.data;
     if (!result.ok || !data || !data.user) {
       if (err) {
@@ -1924,6 +1969,7 @@ function bindLogin() {
         send.disabled = false;
         send.textContent = "войти";
       }
+      busy = false;
       return;
     }
     user = { id: data.user.id, name: data.user.name, key };
@@ -3021,7 +3067,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=48").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=49").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
