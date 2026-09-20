@@ -441,8 +441,11 @@ h3 {
 .lecture p { margin: 0 0 16px; font-size: 17px; line-height: 1.7; max-width: 40em; }
 
 .hw { padding-top: 8px; }
-.hw .ask { font-size: 18px; margin: 0 0 8px; }
-.hw .hint { font-size: 14px; color: var(--mute); margin: 0 0 16px; }
+.hw .ask,
+.hw-kira-page .ask { font-size: 18px; margin: 0 0 8px; }
+.hw .hint,
+.hw-kira-page .hint { font-size: 14px; color: var(--mute); margin: 0 0 16px; }
+.hw-kira-page .chat-log { min-height: 240px; }
 .hw textarea {
   min-height: 140px;
   resize: vertical;
@@ -1878,20 +1881,19 @@ html, body { background: var(--snow); color: var(--ink); }
   .lesson-rail::-webkit-scrollbar { display: none; }
   .lesson-rail a {
     flex: 0 0 auto;
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 14px;
+    border-radius: 999px;
     background: #ebe6df;
     color: #3d344f;
+    white-space: nowrap;
   }
-  .lesson-rail a em {
-    font-family: var(--display);
-    font-style: normal;
+  .lesson-rail a span {
     font-size: 13px;
-    letter-spacing: -0.04em;
-    color: inherit;
+    line-height: 1.2;
+    white-space: nowrap;
   }
   .lesson-rail a.on { background: #e7e0f7; color: #3d344f; font-weight: 600; }
   .lesson-rail a.is-done { box-shadow: inset 0 0 0 1.5px #78699d; }
@@ -1999,26 +2001,36 @@ html, body { background: var(--snow); color: var(--ink); }
   .chat-in .btn,
   .chat-in .gpt-send { width: 36px; min-width: 36px; }
   body.has-cookie .chat-in { bottom: calc(132px + env(safe-area-inset-bottom)); }
-  .lesson-kira {
+  .hw-kira-page {
+    flex: 1 1 auto;
     min-height: 0;
-    padding-bottom: 0;
-    border-top: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
-  .lesson-kira .chat-log {
-    min-height: 160px;
-    max-height: 48vh;
+  .hw-kira-page .lesson-head { margin-bottom: 8px; }
+  .hw-kira-page .lesson-head .lede,
+  .hw-kira-page .lesson-number { display: none; }
+  .hw-kira-page .lesson-head h2 {
+    font-size: 22px;
+    margin: 0;
+  }
+  .hw-kira-page .hw-sec {
+    flex: 0 1 auto;
+    max-height: 42%;
+    overflow-x: hidden;
     overflow-y: auto;
+    margin: 0 0 8px;
+    -webkit-overflow-scrolling: touch;
   }
-  .lesson-kira .chat-in,
-  body.has-cookie .lesson-kira .chat-in {
-    position: relative;
-    left: auto;
-    right: auto;
-    bottom: auto;
-    z-index: 1;
-    padding: 10px 0 0;
-    box-shadow: none;
-    background: transparent;
+  .hw-kira-page .hw-sec .section-label { margin-bottom: 6px; }
+  .hw-kira-page .ask { margin: 0 0 6px; font-size: 15px; }
+  .hw-kira-page .hint { margin: 0 0 10px; }
+  .hw-kira-page .hw { padding: 12px; }
+  .hw-kira-page .hw textarea { min-height: 88px; }
+  .hw-kira-page .chat-wrap {
+    flex: 1 1 0;
+    min-height: 0;
   }
   .kira-pills { gap: 6px; }
   .kira-pills button { min-height: 40px; }
@@ -2523,28 +2535,19 @@ html, body { background: var(--snow); color: var(--ink); }
   .step-rail::-webkit-scrollbar { display: none; }
   .step-rail a {
     flex: 0 0 auto;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    max-width: 220px;
     min-height: 40px;
-    padding: 6px 12px 6px 8px;
+    padding: 8px 16px;
     border-radius: 999px;
     background: #ebe6df;
     color: #3d344f;
-  }
-  .step-rail a em {
-    flex: 0 0 22px;
-    font-family: var(--display);
-    font-style: normal;
-    font-size: 12px;
-    text-align: center;
+    white-space: nowrap;
   }
   .step-rail a span {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 13px;
+    line-height: 1.2;
     white-space: nowrap;
-    font-size: 12px;
   }
   .step-rail a.on { background: #e7e0f7; font-weight: 600; }
   .step-rail a.is-done { box-shadow: inset 0 0 0 1.5px #78699d; }

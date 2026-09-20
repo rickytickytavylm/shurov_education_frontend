@@ -415,11 +415,11 @@ function parseHash() {
 }
 
 function lectureStage() {
-  return currentStage === "task" || currentStage === "kira" ? currentStage : "watch";
+  return currentStage === "task" || currentStage === "kira" ? "task" : "watch";
 }
 
 function lessonHref(id, stage) {
-  if (stage && stage !== "watch") return "/lesson/" + id + "/" + stage;
+  if (stage === "task" || stage === "kira") return "/lesson/" + id + "/task";
   return "/lesson/" + id;
 }
 
@@ -487,7 +487,7 @@ function route() {
       view = hasAccess() ? "lesson" : "login";
     } else {
       currentId = id;
-      currentStage = extra === "task" || extra === "kira" ? extra : "watch";
+      currentStage = extra === "task" || extra === "kira" ? "task" : "watch";
       view = hasAccess() ? "lesson" : "login";
     }
   } else if (path === "tools") {
@@ -649,7 +649,7 @@ function render(opts) {
   const keepScroll = Boolean(opts.keepScroll);
   const focus = opts.focus || "";
   const y = keepScroll ? getScrollY() : 0;
-  document.body.classList.toggle("is-kira", view === "kira");
+  document.body.classList.toggle("is-kira", view === "kira" || (view === "lesson" && lectureStage() === "task"));
   pinAppShell();
   if (!keepScroll && view !== "start") setScrollY(0, "instant");
   if (view === "start") {
@@ -950,36 +950,27 @@ function shellHtml(inner) {
       const done = moduleComplete(m) ? " is-done" : "";
       const lock = canOpenModule(m) ? "" : " is-lock";
       const soon = moduleComingSoon(m) ? " is-soon" : "";
-      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${moduleComingSoon(m) ? (m.final ? "Итоговый тест, скоро откроется" : "Модуль " + m.n + ", скоро откроется") : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><em>${String(m.n).padStart(2, "0")}</em></a>`;
+      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${moduleComingSoon(m) ? (m.final ? "Итоговый тест, скоро откроется" : "Модуль " + m.n + ", скоро откроется") : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><span>${esc(m.title)}</span></a>`;
     })
     .join("");
   const lecture = here.lesson && here.lesson.type === "lesson";
   const stage = lectureStage();
   const steps = lecture
     ? [
-        { step: "watch", n: "1", title: "Урок" },
-        { step: "task", n: "2", title: "Задание" },
-        { step: "kira", n: "3", title: "Кира" },
+        { step: "watch", title: "Материал" },
+        { step: "task", title: "Задание с Кирой" },
       ]
         .map((item) => {
           const on = view === "lesson" && stage === item.step ? " on" : "";
           const done =
             item.step === "watch" ||
-            (item.step === "task" && homework[here.lesson.id] && homework[here.lesson.id].text) ||
-            (item.step === "kira" && homework[here.lesson.id] && homework[here.lesson.id].review)
+            (item.step === "task" && homework[here.lesson.id] && homework[here.lesson.id].text)
               ? " is-done"
               : "";
-          return `<a class="${on}${done}" href="#${lessonHref(here.lesson.id, item.step)}" data-id="${here.lesson.id}" data-step="${item.step}"><em>${item.n}</em><span>${item.title}</span></a>`;
+          return `<a class="${on}${done}" href="#${lessonHref(here.lesson.id, item.step)}" data-id="${here.lesson.id}" data-step="${item.step}"><span>${item.title}</span></a>`;
         })
         .join("")
-    : lessonsOf(here.module)
-        .map((l, i) => {
-          const on = view === "lesson" && currentId === l.id ? " on" : "";
-          const done = progress[l.id] ? " is-done" : "";
-          const lock = canOpenLesson(l.id) ? "" : " is-lock";
-          return `<a class="${on}${done}${lock}" href="#/lesson/${l.id}" data-id="${l.id}"><em>${i + 1}</em><span>${esc(l.title)}</span></a>`;
-        })
-        .join("");
+    : "";
   return `
     <div class="app">
       <div class="app-head">
@@ -995,7 +986,7 @@ function shellHtml(inner) {
         ${isStandalone() ? `<span class="pwa-badge light">приложение</span>` : `<button class="text-link light" type="button" data-pwa-open>на телефон</button>`}
         <button class="text-link light" type="button" id="logout">выйти</button>
       </header>
-      ${view === "lesson" ? `<nav class="lesson-rail" aria-label="Модули">${rail}</nav><nav class="step-rail" aria-label="Шаги модуля">${steps}</nav>` : ""}
+      ${view === "lesson" ? `<nav class="lesson-rail" aria-label="Модули">${rail}</nav>${steps ? `<nav class="step-rail" aria-label="Шаги урока">${steps}</nav>` : ""}` : ""}
       </div>
       <div class="body">
         <aside class="side">
@@ -1144,10 +1135,7 @@ function lessonHtml() {
 }
 
 function lectureHtml(module, lesson) {
-  const stage = lectureStage();
-  if (stage === "task") return lectureTaskHtml(module, lesson);
-  if (stage === "kira") return lectureKiraHtml(module, lesson);
-  return lectureWatchHtml(module, lesson);
+  return lectureStage() === "task" ? lectureTaskHtml(module, lesson) : lectureWatchHtml(module, lesson);
 }
 
 function lectureWatchHtml(module, lesson) {
@@ -1173,37 +1161,25 @@ function lectureWatchHtml(module, lesson) {
 function lectureTaskHtml(module, lesson) {
   const hw = homework[lesson.id] || { text: "", review: null };
   const task = lesson.homework || { prompt: "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.", hint: "Пишите факт: время, место, действие." };
-  return `
-    ${lessonHead(module, lesson)}
-    <section class="section hw-sec">
-      <div class="section-label">Практическое задание</div>
-      <h3>Ваш ответ</h3>
-      <div class="hw">
-        <p class="ask">${esc(task.prompt)}</p>
-        <p class="hint">${esc(task.hint)}</p>
-        <textarea id="hwText" placeholder="Опишите сцену своими словами">${esc(hw.text)}</textarea>
-        <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу — Кира разберёт ответ.</p>
-        <div class="row">
-          <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить Кире"}</button>
-        </div>
-      </div>
-    </section>`;
-}
-
-function lectureKiraHtml(module, lesson) {
-  const hw = homework[lesson.id] || { text: "", review: null };
   const thread = lessonKiraThread(lesson.id);
   const msgs = thread.map((m) => kiraMsgHtml(m)).join("");
-  const quote = hw.text
-    ? `<blockquote class="hw-quote"><span>Ваш ответ</span>${esc(hw.text)}</blockquote>`
-    : `<p class="hint">Сначала напишите ответ в задании — Кира разберёт его здесь. Можно и просто спросить по уроку.</p>`;
   return `
-    ${lessonHead(module, lesson)}
-    <section class="section lesson-kira-sec">
-      <div class="section-label">Разбор</div>
-      <h3>Кира по этому уроку</h3>
-      ${quote}
-      <div class="chat-wrap lesson-kira">
+    <div class="kira-page hw-kira-page">
+      ${lessonHead(module, lesson)}
+      <section class="hw-sec">
+        <div class="section-label">Практическое задание</div>
+        <p class="ask">${esc(task.prompt)}</p>
+        <p class="hint">${esc(task.hint)}</p>
+        <div class="hw">
+          <textarea id="hwText" placeholder="Опишите сцену своими словами">${esc(hw.text)}</textarea>
+          <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу — Кира разберёт ответ.</p>
+          <div class="row">
+            <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить Кире"}</button>
+            ${nextCta(module, lesson)}
+          </div>
+        </div>
+      </section>
+      <div class="chat-wrap kira-wrap">
         <div class="chat-log" id="lessonKiraLog">${msgs}</div>
         <form class="chat-in gpt-in" id="lessonKiraForm">
           <div class="gpt-box">
@@ -1214,8 +1190,7 @@ function lectureKiraHtml(module, lesson) {
           </div>
         </form>
       </div>
-      <div class="row">${nextCta(module, lesson)}</div>
-    </section>`;
+    </div>`;
 }
 
 function lessonKiraThread(lessonId) {
@@ -2076,10 +2051,7 @@ function bindLesson() {
     }
     return;
   }
-  if (stage === "task") {
-    bindHomeworkSend(lesson);
-    return;
-  }
+  bindHomeworkSend(lesson);
   bindLessonKira(lesson);
 }
 
@@ -2095,12 +2067,16 @@ function bindHomeworkSend(lesson) {
       return;
     }
     if (err) err.hidden = true;
-    homework[lesson.id] = { text, review: null };
+    homework[lesson.id] = { text, review: homework[lesson.id] && homework[lesson.id].review ? homework[lesson.id].review : null };
     save(LS.hw, homework);
     progress[lesson.id] = true;
     save(LS.progress, progress);
     syncProfile();
-    go(lessonHref(lesson.id, "kira"));
+    send.textContent = "отправляем…";
+    startHomeworkStream(lesson, text).finally(() => {
+      const btn = document.getElementById("hwSend");
+      if (btn) btn.textContent = "отправить повторно";
+    });
   };
 }
 
@@ -2117,6 +2093,13 @@ function bindLessonKira(lesson) {
   };
   if (box) {
     box.addEventListener("input", grow);
+    box.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const mobile = window.matchMedia("(max-width: 720px)").matches;
+      if (mobile || e.shiftKey) return;
+      e.preventDefault();
+      form.requestSubmit();
+    });
     grow();
   }
   if (form) {
@@ -2139,7 +2122,7 @@ let hwStreamLock = "";
 
 async function startHomeworkStream(lesson, text) {
   const log = document.getElementById("lessonKiraLog");
-  if (!log) return;
+  if (!log || hwStreamLock === lesson.id) return;
   hwStreamLock = lesson.id;
   const replyId = "hw-" + lesson.id;
   log.insertAdjacentHTML("beforeend", kiraMsgHtml({
@@ -3038,7 +3021,11 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=48").catch(() => {});
+    if (!window.SE_SW_RELOAD) {
+      window.SE_SW_RELOAD = true;
+      navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
+    }
   }
 }
 
