@@ -621,12 +621,39 @@ function showPendingIn(slotId, text) {
   revealReply("replyPending");
 }
 
-function kiraMsgHtml(m) {
+function kiraMsgHtml(m, extra) {
   const think = Boolean(m.think) || m.id === "think";
+  const action = !m.me && !think && extra ? extra : "";
   return `<div class="msg${m.me ? " me" : ""}${think ? " is-think" : ""}" data-id="${esc(m.id)}">
     <div class="who">${esc(m.name)}</div>
     <div class="bubble">${think ? '<span class="reply-dots" aria-hidden="true"><i></i><i></i><i></i></span>' : esc(m.text)}</div>
+    ${action}
   </div>`;
+}
+
+function moduleChipLabel(m) {
+  if (m.final) return "Итоговый тест";
+  return "Модуль " + m.n + ": " + m.title;
+}
+
+function lessonNextBtn(module, lesson) {
+  const next = nextStepId(module, lesson);
+  if (next) {
+    const nxt = findLesson(next);
+    const label = nxt.module.id === module.id ? "следующий шаг" : "следующий модуль";
+    return `<a class="msg-next" href="#/lesson/${esc(next)}">${label}</a>`;
+  }
+  const mi = course.modules.findIndex((m) => m.id === module.id);
+  const after = course.modules[mi + 1];
+  const first = after && lessonsOf(after)[0];
+  if (!first) return "";
+  return `<a class="msg-next" href="#/lesson/${esc(first.id)}">следующий модуль</a>`;
+}
+
+function lessonKiraAction(m, module, lesson) {
+  if (!m || m.me || m.think || String(m.id || "").indexOf("q-") === 0) return "";
+  if (!progress[lesson.id]) return "";
+  return lessonNextBtn(module, lesson);
 }
 
 function scrollKiraLatest() {
@@ -968,7 +995,7 @@ function shellHtml(inner) {
       const done = moduleComplete(m) ? " is-done" : "";
       const lock = canOpenModule(m) ? "" : " is-lock";
       const soon = moduleComingSoon(m) ? " is-soon" : "";
-      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${moduleComingSoon(m) ? (m.final ? "Итоговый тест, скоро откроется" : "Модуль " + m.n + ", скоро откроется") : m.final ? "Итоговый тест" : "Модуль " + m.n}. ${esc(m.title)}"><span>${esc(m.title)}</span></a>`;
+      return `<a class="${on}${done}${lock}${soon}" href="#/lesson/${lesson.id}" data-id="${lesson.id}" aria-label="${esc(moduleChipLabel(m))}"><span>${esc(moduleChipLabel(m))}</span></a>`;
     })
     .join("");
   const lecture = here.lesson && here.lesson.type === "lesson";
@@ -1185,13 +1212,12 @@ function homeworkPrompt(lesson) {
 
 function lectureTaskHtml(module, lesson) {
   const thread = lessonKiraThread(lesson);
-  const msgs = thread.map((m) => kiraMsgHtml(m)).join("");
+  const msgs = thread.map((m) => kiraMsgHtml(m, lessonKiraAction(m, module, lesson))).join("");
   const answered = Boolean(homework[lesson.id] && homework[lesson.id].text);
   return `
     <div class="kira-page hw-kira-page">
       <div class="chat-wrap kira-wrap">
         <div class="chat-log" id="lessonKiraLog">${msgs}</div>
-        <div class="hw-next" id="hwNext">${answered ? nextCta(module, lesson) : ""}</div>
         <form class="chat-in gpt-in" id="lessonKiraForm">
           <div class="gpt-box">
             <textarea name="text" rows="1" autocomplete="off" enterkeyhint="enter" inputmode="text" placeholder="${answered ? "Спросите Киру по этому уроку" : "Напишите ответ сюда"}"></textarea>
@@ -2133,9 +2159,6 @@ function bindLessonKira(lesson) {
   };
   const afterAnswer = () => {
     if (box) box.placeholder = "Спросите Киру по этому уроку";
-    const next = document.getElementById("hwNext");
-    const { module } = findLesson(lesson.id);
-    if (next) next.innerHTML = nextCta(module, lesson);
   };
   if (box) {
     box.addEventListener("input", grow);
@@ -2208,7 +2231,7 @@ async function startHomeworkStream(lesson, text) {
     thread.push({ id: replyId, name: "Кира AI", me: false, text: finalText });
     lessonChat[lesson.id] = thread;
     save(LS.lessonChat, lessonChat);
-    setLessonKiraLive(replyId, { text: finalText });
+    setLessonKiraLive(replyId, { text: finalText, next: true, lesson });
     progress[lesson.id] = true;
     save(LS.progress, progress);
     syncProfile();
@@ -2247,7 +2270,7 @@ async function askLessonKira(lesson, text) {
     text: finalText,
   });
   save(LS.lessonChat, lessonChat);
-  setLessonKiraLive(replyId, { text: finalText });
+  setLessonKiraLive(replyId, { text: finalText, next: true, lesson });
 }
 
 function setLessonKiraLive(id, opts) {
@@ -2272,6 +2295,10 @@ function setLessonKiraLive(id, opts) {
   } else {
     el.classList.remove("is-think");
     if (bubble) bubble.textContent = opts.text || "";
+    if (opts.next && opts.lesson && !el.querySelector(".msg-next")) {
+      const { module } = findLesson(opts.lesson.id);
+      el.insertAdjacentHTML("beforeend", lessonNextBtn(module, opts.lesson));
+    }
   }
   log.scrollTop = log.scrollHeight;
 }
@@ -3085,7 +3112,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=50").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=51").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
