@@ -1,9 +1,9 @@
-const CACHE = "se-cabinet-v43";
+const CACHE = "se-cabinet-v44";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=62",
-  "app.js?v=63",
+  "styles.css?v=63",
+  "app.js?v=64",
   "course.js?v=19",
   "config.js?v=6",
   "manifest.webmanifest",
@@ -71,6 +71,19 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
+
+  if (url.pathname.endsWith("/manifest.webmanifest") || url.pathname.endsWith("/sw.js")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+          return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
 
   if (event.request.mode === "navigate") {
     event.respondWith(

@@ -552,7 +552,7 @@ function pinAppShell() {
       document.documentElement.style.removeProperty("--kb-inset");
     }
     const theme = document.querySelector('meta[name="theme-color"]');
-    if (theme) theme.setAttribute("content", document.querySelector(".app") ? "#f7f4ee" : "#17151b");
+    if (theme) theme.setAttribute("content", "#17151b");
   };
   apply();
   if (window.SE_VV_BOUND) return;
