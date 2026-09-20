@@ -178,6 +178,11 @@ function firstApplyStep() {
 
 function findLesson(id) {
   for (const m of course.modules) {
+    const raw = rawLessons(m).find((l) => l.id === id);
+    if (raw && isModuleQuiz(raw)) {
+      const fallback = [...lessonsOf(m)].reverse().find((l) => l.type === "lesson") || lessonsOf(m)[0];
+      return { module: m, lesson: fallback, skippedQuiz: true };
+    }
     const lesson = lessonsOf(m).find((l) => l.id === id);
     if (lesson) return { module: m, lesson };
   }
@@ -185,8 +190,16 @@ function findLesson(id) {
   return { module: first, lesson: lessonsOf(first)[0] };
 }
 
-function lessonsOf(mod) {
+function rawLessons(mod) {
   return (mod.lessons || []).filter((l) => l && l.id);
+}
+
+function isModuleQuiz(lesson) {
+  return Boolean(lesson && lesson.type === "quiz" && !lesson.final);
+}
+
+function lessonsOf(mod) {
+  return rawLessons(mod).filter((l) => !isModuleQuiz(l));
 }
 
 function allLessons() {
@@ -480,7 +493,12 @@ function route() {
       return;
     }
     const opened = findLesson(id);
-    if (opened.module && opened.module.hidden) {
+    if (opened.skippedQuiz) {
+      currentId = opened.lesson.id;
+      currentStage = "watch";
+      if (location.hash !== "#/lesson/" + opened.lesson.id) location.hash = "/lesson/" + opened.lesson.id;
+      view = hasAccess() ? "lesson" : "login";
+    } else if (opened.module && opened.module.hidden) {
       currentId = "m1-l1";
       currentStage = "watch";
       if (location.hash !== "#/lesson/m1-l1") location.hash = "/lesson/m1-l1";
@@ -753,7 +771,7 @@ function startHtml() {
         <div class="inner">
           <p><b>Кира AI</b><span>Персональный AI-помощник и разбор заданий</span></p>
           <p><b>Старт в кабинете</b><span>Обращение автора, анкета и данные участника</span></p>
-          <p><b>4 модуля программы</b><span>Лекции, практика и проверки</span></p>
+          <p><b>4 модуля программы</b><span>Лекции, практика и задание с Кирой</span></p>
         </div>
       </section>
 
@@ -1082,7 +1100,7 @@ function comingSoonActions(mod) {
 function lockedHtml(reason, module, lesson) {
   const prev = course.modules[course.modules.findIndex((m) => m.id === module.id) - 1];
   let title = "Материал заблокирован";
-  let text = "Материалы открываются по порядку: конспект, практическое задание, проверка.";
+  let text = "Материалы открываются по порядку: видео, конспект и задание с Кирой.";
   let action = "";
   if (reason === "need-pay") {
     title = "Доступ к основному блоку программы";
@@ -1092,7 +1110,7 @@ function lockedHtml(reason, module, lesson) {
   } else if (reason === "need-prev-module") {
     title = "Модуль пока недоступен";
     text = prev
-      ? `Для перехода к этой теме завершите все шаги предыдущего модуля «${prev.title}»: конспект, практическое задание и проверку.`
+      ? `Для перехода к этой теме завершите видео и задание предыдущего модуля «${prev.title}».`
       : "Сначала завершите предыдущий модуль программы.";
     const jump = prev ? firstIncompleteIn(prev) : continueLessonId();
     action = `<a class="btn" href="#/lesson/${esc(jump)}">перейти к незавершенному шагу</a>`;
@@ -1158,32 +1176,25 @@ function lectureWatchHtml(module, lesson) {
     </section>`;
 }
 
+function homeworkPrompt(lesson) {
+  const task = lesson.homework || {};
+  const prompt = String(task.prompt || "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.").trim();
+  const hint = String(task.hint || "").trim();
+  return hint ? prompt + "\n\n" + hint : prompt;
+}
+
 function lectureTaskHtml(module, lesson) {
-  const hw = homework[lesson.id] || { text: "", review: null };
-  const task = lesson.homework || { prompt: "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.", hint: "Пишите факт: время, место, действие." };
-  const thread = lessonKiraThread(lesson.id);
+  const thread = lessonKiraThread(lesson);
   const msgs = thread.map((m) => kiraMsgHtml(m)).join("");
+  const answered = Boolean(homework[lesson.id] && homework[lesson.id].text);
   return `
     <div class="kira-page hw-kira-page">
-      ${lessonHead(module, lesson)}
-      <section class="hw-sec">
-        <div class="section-label">Практическое задание</div>
-        <p class="ask">${esc(task.prompt)}</p>
-        <p class="hint">${esc(task.hint)}</p>
-        <div class="hw">
-          <textarea id="hwText" placeholder="Опишите сцену своими словами">${esc(hw.text)}</textarea>
-          <p class="form-err" id="hwErr" hidden>Напишите хотя бы фразу — Кира разберёт ответ.</p>
-          <div class="row">
-            <button class="btn" type="button" id="hwSend">${hw.review ? "отправить повторно" : "отправить Кире"}</button>
-            ${nextCta(module, lesson)}
-          </div>
-        </div>
-      </section>
       <div class="chat-wrap kira-wrap">
         <div class="chat-log" id="lessonKiraLog">${msgs}</div>
+        <div class="hw-next" id="hwNext">${answered ? nextCta(module, lesson) : ""}</div>
         <form class="chat-in gpt-in" id="lessonKiraForm">
           <div class="gpt-box">
-            <textarea name="text" rows="1" autocomplete="off" enterkeyhint="enter" inputmode="text" placeholder="Спросите Киру по этому уроку"></textarea>
+            <textarea name="text" rows="1" autocomplete="off" enterkeyhint="enter" inputmode="text" placeholder="${answered ? "Спросите Киру по этому уроку" : "Напишите ответ сюда"}"></textarea>
             <button class="gpt-send" type="submit" aria-label="Отправить">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0-12 5 5m-5-5-5 5M6 20h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
@@ -1193,14 +1204,23 @@ function lectureTaskHtml(module, lesson) {
     </div>`;
 }
 
-function lessonKiraThread(lessonId) {
+function lessonKiraThread(lesson) {
+  const lessonId = typeof lesson === "string" ? lesson : lesson.id;
   const saved = Array.isArray(lessonChat[lessonId]) ? lessonChat[lessonId] : [];
-  if (saved.length) return saved;
-  const hw = homework[lessonId];
-  if (hw && hw.review) {
-    return [{ id: "rev-" + lessonId, name: "Кира AI", me: false, text: reviewPlain(hw.review) }];
+  const item = typeof lesson === "string" ? findLesson(lesson).lesson : lesson;
+  const q = { id: "q-" + lessonId, name: "Кира AI", me: false, text: homeworkPrompt(item) };
+  if (saved.length) {
+    return saved.some((m) => m.id === q.id) ? saved : [q].concat(saved);
   }
-  return [];
+  const hw = homework[lessonId];
+  const out = [q];
+  if (hw && hw.text) {
+    out.push({ id: "a-" + lessonId, name: (user && user.name) || "Вы", me: true, text: hw.text });
+  }
+  if (hw && hw.review) {
+    out.push({ id: "rev-" + lessonId, name: "Кира AI", me: false, text: reviewPlain(hw.review) });
+  }
+  return out;
 }
 
 function reviewPlain(review) {
@@ -2097,33 +2117,7 @@ function bindLesson() {
     }
     return;
   }
-  bindHomeworkSend(lesson);
   bindLessonKira(lesson);
-}
-
-function bindHomeworkSend(lesson) {
-  const send = document.getElementById("hwSend");
-  const area = document.getElementById("hwText");
-  if (!send || !area) return;
-  send.onclick = () => {
-    const text = area.value.trim();
-    const err = document.getElementById("hwErr");
-    if (!text) {
-      if (err) err.hidden = false;
-      return;
-    }
-    if (err) err.hidden = true;
-    homework[lesson.id] = { text, review: homework[lesson.id] && homework[lesson.id].review ? homework[lesson.id].review : null };
-    save(LS.hw, homework);
-    progress[lesson.id] = true;
-    save(LS.progress, progress);
-    syncProfile();
-    send.textContent = "отправляем…";
-    startHomeworkStream(lesson, text).finally(() => {
-      const btn = document.getElementById("hwSend");
-      if (btn) btn.textContent = "отправить повторно";
-    });
-  };
 }
 
 function bindLessonKira(lesson) {
@@ -2131,11 +2125,17 @@ function bindLessonKira(lesson) {
   const form = document.getElementById("lessonKiraForm");
   const box = form && form.querySelector("textarea");
   const hw = homework[lesson.id] || {};
-  lessonChat[lesson.id] = lessonKiraThread(lesson.id);
+  lessonChat[lesson.id] = lessonKiraThread(lesson);
   const grow = () => {
     if (!box) return;
     box.style.height = "24px";
     box.style.height = Math.min(box.scrollHeight, 140) + "px";
+  };
+  const afterAnswer = () => {
+    if (box) box.placeholder = "Спросите Киру по этому уроку";
+    const next = document.getElementById("hwNext");
+    const { module } = findLesson(lesson.id);
+    if (next) next.innerHTML = nextCta(module, lesson);
   };
   if (box) {
     box.addEventListener("input", grow);
@@ -2155,6 +2155,22 @@ function bindLessonKira(lesson) {
       if (!text) return;
       if (box) box.value = "";
       grow();
+      const done = Boolean(homework[lesson.id] && homework[lesson.id].text);
+      if (!done) {
+        homework[lesson.id] = { text, review: null };
+        save(LS.hw, homework);
+        progress[lesson.id] = true;
+        save(LS.progress, progress);
+        const mine = { id: "a-" + lesson.id, name: (user && user.name) || "Вы", me: true, text };
+        lessonChat[lesson.id] = (lessonChat[lesson.id] || lessonKiraThread(lesson)).concat(mine);
+        save(LS.lessonChat, lessonChat);
+        if (log) log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
+        if (log) log.scrollTop = log.scrollHeight;
+        afterAnswer();
+        syncProfile();
+        startHomeworkStream(lesson, text);
+        return;
+      }
       askLessonKira(lesson, text);
     };
   }
@@ -2188,7 +2204,9 @@ async function startHomeworkStream(lesson, text) {
     const finalText = String(streamed || acc || localKiraReply(text)).trim();
     homework[lesson.id] = { text, review: { summary: finalText, points: [] } };
     save(LS.hw, homework);
-    lessonChat[lesson.id] = [{ id: replyId, name: "Кира AI", me: false, text: finalText }];
+    const thread = (lessonChat[lesson.id] || lessonKiraThread(lesson)).filter((m) => m.id !== replyId);
+    thread.push({ id: replyId, name: "Кира AI", me: false, text: finalText });
+    lessonChat[lesson.id] = thread;
     save(LS.lessonChat, lessonChat);
     setLessonKiraLive(replyId, { text: finalText });
     progress[lesson.id] = true;
@@ -3067,7 +3085,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=49").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=50").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());

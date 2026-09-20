@@ -465,7 +465,7 @@ h3 {
 .chat-log { flex: 1; overflow: auto; padding: 22px 0; display: flex; flex-direction: column; gap: 14px; }
 .msg { max-width: 72%; }
 .msg .who { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); margin-bottom: 4px; }
-.msg .bubble { background: #fff; padding: 10px 12px; border-radius: 14px; }
+.msg .bubble { background: #fff; padding: 10px 12px; border-radius: 14px; white-space: pre-wrap; }
 .msg.me { align-self: flex-end; text-align: right; }
 .msg.me .bubble { background: var(--ink); color: var(--fog); }
 .chat-in { display: flex; gap: 10px; padding: 14px 0; border-top: 1px solid rgba(22, 20, 31, 0.08); }
@@ -2008,30 +2008,16 @@ html, body { background: var(--snow); color: var(--ink); }
     flex-direction: column;
     overflow: hidden;
   }
-  .hw-kira-page .lesson-head { margin-bottom: 8px; }
-  .hw-kira-page .lesson-head .lede,
-  .hw-kira-page .lesson-number { display: none; }
-  .hw-kira-page .lesson-head h2 {
-    font-size: 22px;
-    margin: 0;
-  }
-  .hw-kira-page .hw-sec {
-    flex: 0 1 auto;
-    max-height: 42%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    margin: 0 0 8px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .hw-kira-page .hw-sec .section-label { margin-bottom: 6px; }
-  .hw-kira-page .ask { margin: 0 0 6px; font-size: 15px; }
-  .hw-kira-page .hint { margin: 0 0 10px; }
-  .hw-kira-page .hw { padding: 12px; }
-  .hw-kira-page .hw textarea { min-height: 88px; }
   .hw-kira-page .chat-wrap {
     flex: 1 1 0;
     min-height: 0;
   }
+  .hw-kira-page .hw-next:empty { display: none; }
+  .hw-kira-page .hw-next {
+    flex: 0 0 auto;
+    padding: 4px 0 8px;
+  }
+  .hw-kira-page .hw-next .btn { width: 100%; }
   .kira-pills { gap: 6px; }
   .kira-pills button { min-height: 40px; }
 
