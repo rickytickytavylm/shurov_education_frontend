@@ -2851,7 +2851,7 @@ body.pwa-open { overflow: hidden; }
 html:has(.app),
 body:has(.app) { background: #f7f4ee; }
 @media (display-mode: standalone) {
-  html, body { background: #17151b; }
+  html, body { background: #ffffff; }
   html:has(.app),
   body:has(.app),
   body:has(.app) #app {
@@ -2860,10 +2860,6 @@ body:has(.app) { background: #f7f4ee; }
     max-height: 100dvh;
     overflow: hidden;
     background: #f7f4ee;
-  }
-  body:has(.app) .app-head,
-  body:has(.app) .top {
-    background: #17151b;
   }
 }
 

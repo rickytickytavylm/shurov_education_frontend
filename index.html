@@ -2,11 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-  <meta name="theme-color" content="#17151b" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="application-name" content="Школа Шурова" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Школа Шурова" />
   <title>Школа доктора Шурова. Образовательная платформа</title>
   <meta name="description" content="Образовательная платформа курса доктора Шурова: четыре модуля, интерактивное тестирование, анкеты и AI-тьютор Кира AI." />
@@ -30,6 +31,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <script>
+    (function () {
+      if (location.hostname === "www.doctorshurov.ru") {
+        location.replace("https://doctorshurov.ru/" + location.search + location.hash);
+      }
+    })();
     document.addEventListener("click", function (e) {
       var t = e.target && e.target.closest && e.target.closest("#logout");
       if (!t) return;
@@ -49,12 +55,13 @@
       }, { passive: false });
     })();
   </script>
-  <script src="config.js?v=6"></script>
+  <script src="config.js?v=7"></script>
   <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/pwa-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/pwa-192.png" />
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Play:wght@400;700&family=Unbounded:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=65" />
+  <link rel="stylesheet" href="styles.css?v=66" />
 </head>
 <body>
   <div id="app"></div>
@@ -73,8 +80,9 @@
             <li>Откройте страницу в <b>Safari</b> (не Chrome, не внутри Telegram или других приложений).</li>
             <li>Нажмите кнопку <b>Поделиться</b> в нижней панели: квадрат со стрелкой вверх.</li>
             <li>Пролистайте меню и выберите <b>На экран «Домой»</b>.</li>
-            <li>Подтвердите добавление кнопкой <b>Добавить</b> вверху справа.</li>
-            <li>Запускайте программу напрямую с домашнего экрана.</li>
+            <li>Включите переключатель <b>Открыть как веб-приложение</b> — без него iPhone откроет обычный Safari со строками браузера.</li>
+            <li>Подтвердите кнопкой <b>Добавить</b> вверху справа.</li>
+            <li>Закройте Safari и запускайте только иконку с домашнего экрана.</li>
           </ol>
         </article>
         <article class="pwa-card" data-os="android">
@@ -95,6 +103,6 @@
     <button type="button" id="cookieOk">Ok</button>
   </div>
   <script src="course.js?v=19"></script>
-  <script src="app.js?v=66"></script>
+  <script src="app.js?v=67"></script>
 </body>
 </html>

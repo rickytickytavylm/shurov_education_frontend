@@ -566,7 +566,7 @@ function pinAppShell() {
       document.documentElement.style.removeProperty("--kb-inset");
     }
     const theme = document.querySelector('meta[name="theme-color"]');
-    if (theme) theme.setAttribute("content", "#17151b");
+    if (theme) theme.setAttribute("content", "#ffffff");
   };
   apply();
   if (window.SE_VV_BOUND) return;
@@ -1007,7 +1007,7 @@ function shellHtml(inner) {
           ${mods}
           <div class="pwa-side">
             <b>Веб-приложение</b>
-            <span>${isStandalone() ? "Кабинет запущен как приложение." : "Установите образовательную платформу на домашний экран. iPhone: Safari. Android: Chrome."}</span>
+            <span>${isStandalone() ? "Кабинет запущен как приложение." : "iPhone: Safari → Поделиться → На экран «Домой» → включите «Открыть как веб-приложение». Android: Chrome → Установить приложение."}</span>
             ${pwaOpenBtn("Установить", "btn")}
           </div>
           <div class="studio">
@@ -3038,8 +3038,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    const swUrl = new URL("sw.js", window.EDU_BASE || location.href);
-    navigator.serviceWorker.register(swUrl.href).catch(() => {});
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
   }
 }
 

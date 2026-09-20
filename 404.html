@@ -6,6 +6,10 @@
   <title>Школа доктора Шурова</title>
   <script>
     (function () {
+      if (location.hostname === "www.doctorshurov.ru") {
+        location.replace("https://doctorshurov.ru/" + location.search + location.hash);
+        return;
+      }
       var parts = location.pathname.split("/").filter(Boolean);
       var repo = location.hostname.endsWith("github.io") && parts[0] ? "/" + parts[0] + "/" : "/";
       location.replace(repo + location.search + location.hash);

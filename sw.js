@@ -1,12 +1,13 @@
-const CACHE = "se-cabinet-v46";
+const CACHE = "se-cabinet-v47";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=65",
-  "app.js?v=66",
+  "styles.css?v=66",
+  "app.js?v=67",
   "course.js?v=19",
-  "config.js?v=6",
+  "config.js?v=7",
   "manifest.webmanifest",
+  "apple-touch-icon.png",
   "assets/hero-4k.webp",
   "assets/hero-mobile.webp",
   "assets/hello-desktop.jpg",

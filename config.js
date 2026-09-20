@@ -8,12 +8,19 @@
     base = path.endsWith("/") ? path : path.replace(/[^/]+$/, "") || "./";
   }
   window.EDU_BASE = base;
-  let el = document.querySelector("base");
-  if (!el) {
-    el = document.createElement("base");
-    document.head.insertBefore(el, document.head.firstChild);
+  const host = location.hostname;
+  const custom = host === "doctorshurov.ru" || host === "www.doctorshurov.ru";
+  const existingBase = document.querySelector("base");
+  if (custom) {
+    if (existingBase) existingBase.remove();
+  } else {
+    let el = existingBase;
+    if (!el) {
+      el = document.createElement("base");
+      document.head.insertBefore(el, document.head.firstChild);
+    }
+    el.href = base;
   }
-  el.href = base;
   window.EDU_CONFIG = {
     BACKEND_URL:
       location.hostname === "localhost" || location.hostname === "127.0.0.1"
