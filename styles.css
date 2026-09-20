@@ -1064,13 +1064,18 @@ html, body { background: var(--snow); color: var(--ink); }
 .flow-main .lead { max-width: 560px; margin-top: 22px; font-size: 16px; line-height: 1.6; }
 .login-main h1,
 .hello-main h1 { max-width: 16ch; }
-.hello-flow {
+.hello-flow,
+.login-flow {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   min-height: 100dvh;
   background: #17151b;
 }
+.film-bg {
+  display: none;
+}
+.film-shade { display: none; }
 .hello-pic,
 .hello-bg {
   position: absolute;
@@ -1784,10 +1789,45 @@ html, body { background: var(--snow); color: var(--ink); }
     line-height: 1.05;
   }
   .hello-course { max-width: none; }
+  .hello-still { display: none; }
   .hello-bg { object-position: center 18%; }
-  .hello-shade {
-    background: linear-gradient(180deg, rgba(17, 14, 20, .12) 0%, rgba(17, 14, 20, .2) 38%, rgba(17, 14, 20, .78) 68%, rgba(17, 14, 20, .94) 100%);
+  .film-bg {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 18%;
+    pointer-events: none;
   }
+  .film-shade,
+  .hello-shade {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .hello-shade {
+    background: linear-gradient(180deg, rgba(17, 14, 20, .18) 0%, rgba(17, 14, 20, .28) 36%, rgba(17, 14, 20, .72) 68%, rgba(17, 14, 20, .92) 100%);
+  }
+  .film-shade {
+    background: linear-gradient(180deg, rgba(17, 14, 20, .22) 0%, rgba(17, 14, 20, .38) 40%, rgba(17, 14, 20, .74) 70%, rgba(17, 14, 20, .9) 100%);
+  }
+  .login-flow .nav.thin,
+  .login-flow .flow-main,
+  .hello-flow .hello-main {
+    position: relative;
+    z-index: 2;
+  }
+  .login-flow .nav.thin {
+    background: transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+  .login-flow .flow-main::before { display: none; }
+  .login-flow .lead { color: rgba(246, 242, 234, 0.78); }
   .hello-main {
     display: flex;
     flex-direction: column;

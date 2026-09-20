@@ -871,9 +871,31 @@ function cleanKey(raw) {
     .trim();
 }
 
+function filmBgHtml() {
+  return `<video class="film-bg" autoplay muted loop playsinline webkit-playsinline preload="auto" poster="${asset("assets/hello-loop.jpg")}">
+    <source src="${asset("assets/hello-loop.mp4")}" type="video/mp4" />
+  </video>`;
+}
+
+function playFilmBg() {
+  document.querySelectorAll(".film-bg").forEach((video) => {
+    video.muted = true;
+    video.defaultMuted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    const start = () => video.play().catch(() => {});
+    start();
+    video.addEventListener("canplay", start, { once: true });
+  });
+}
+
 function loginHtml() {
   return `
-    <div class="flow">
+    <div class="flow login-flow">
+      ${filmBgHtml()}
+      <div class="film-shade"></div>
       <header class="nav thin">
         <a class="brand" href="#/">${brandHtml()}</a>
         <a class="text-link" href="#/">на стартовую</a>
@@ -895,10 +917,10 @@ function loginHtml() {
 function helloHtml() {
   return `
     <div class="flow hello-flow">
-      <picture class="hello-pic">
-        <source media="(max-width: 720px)" srcset="${asset("assets/hello-mobile.jpg")}" />
+      <picture class="hello-pic hello-still">
         <img class="hello-bg" src="${asset("assets/hello-desktop.jpg")}" alt="" />
       </picture>
+      ${filmBgHtml()}
       <div class="hello-shade"></div>
       <div class="flow-main hello-main">
         <p class="eye">Школа доктора Шурова</p>
@@ -1941,7 +1963,8 @@ function bindStart() {
 }
 
 function bindHello() {
-  setTimeout(() => go("/guide"), 2800);
+  playFilmBg();
+  setTimeout(() => go("/guide"), 5200);
 }
 
 function waitMs(ms) {
@@ -1973,6 +1996,7 @@ function bindLogin() {
   if (!form) return;
   const input = form.querySelector("input[name='key']");
   let busy = false;
+  playFilmBg();
   wakeEduApi();
   form.onsubmit = async (e) => {
     e.preventDefault();
@@ -3121,7 +3145,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=52").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=53").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
