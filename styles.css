@@ -1072,10 +1072,54 @@ html, body { background: var(--snow); color: var(--ink); }
   min-height: 100dvh;
   background: #17151b;
 }
-.film-bg {
+.film-bg,
+.film-still {
   display: none;
 }
 .film-shade { display: none; }
+.login-flow,
+.hello-flow {
+  color: #fff;
+}
+.login-flow .eye,
+.hello-flow .eye {
+  color: rgba(255, 255, 255, 0.88);
+}
+.login-flow .flow-main .lead,
+.hello-flow .lead {
+  color: rgba(255, 255, 255, 0.82);
+}
+.login-flow .nav.thin .text-link {
+  color: rgba(255, 255, 255, 0.74);
+}
+.login-flow .stack-form label {
+  color: rgba(255, 255, 255, 0.72);
+}
+.login-flow .stack-form input {
+  color: #fff;
+  caret-color: #fff;
+  border-bottom-color: rgba(255, 255, 255, 0.46);
+}
+.login-flow .stack-form input::placeholder {
+  color: rgba(255, 255, 255, 0.52);
+}
+.login-flow .stack-form input:-webkit-autofill,
+.login-flow .stack-form input:-webkit-autofill:hover,
+.login-flow .stack-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #fff;
+  caret-color: #fff;
+  transition: background-color 9999s ease-in-out 0s;
+  box-shadow: 0 0 0 1000px rgba(17, 14, 20, 0.42) inset;
+}
+.login-flow .form-err {
+  color: #ffd4cc;
+}
+.hello-flow .hello-mark {
+  color: rgba(255, 255, 255, 0.8);
+}
+.hello-flow .hello-course {
+  color: #fff;
+}
 .hello-pic,
 .hello-bg {
   position: absolute;
@@ -1791,6 +1835,7 @@ html, body { background: var(--snow); color: var(--ink); }
   .hello-course { max-width: none; }
   .hello-still { display: none; }
   .hello-bg { object-position: center 18%; }
+  .film-still,
   .film-bg {
     display: block;
     position: absolute;
@@ -1801,6 +1846,12 @@ html, body { background: var(--snow); color: var(--ink); }
     object-fit: cover;
     object-position: center 18%;
     pointer-events: none;
+  }
+  .film-bg {
+    opacity: 0;
+  }
+  .film-bg.is-on {
+    opacity: 1;
   }
   .film-shade,
   .hello-shade {
@@ -1827,7 +1878,6 @@ html, body { background: var(--snow); color: var(--ink); }
     border-bottom-color: rgba(255, 255, 255, 0.06);
   }
   .login-flow .flow-main::before { display: none; }
-  .login-flow .lead { color: rgba(246, 242, 234, 0.78); }
   .hello-main {
     display: flex;
     flex-direction: column;

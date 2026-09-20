@@ -871,13 +871,40 @@ function cleanKey(raw) {
     .trim();
 }
 
+function filmSrc() {
+  return asset("assets/hello-loop.mp4");
+}
+
+function filmPoster() {
+  return asset("assets/hello-loop.jpg");
+}
+
+function warmFilmBg() {
+  if (window.SE_FILM_WARM) return;
+  window.SE_FILM_WARM = true;
+  const poster = new Image();
+  poster.src = filmPoster();
+  const src = filmSrc();
+  fetch(src, { cache: "force-cache", credentials: "omit" }).catch(() => {});
+  const video = document.createElement("video");
+  video.muted = true;
+  video.preload = "auto";
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.src = src;
+  video.load();
+}
+
 function filmBgHtml() {
-  return `<video class="film-bg" autoplay muted loop playsinline webkit-playsinline preload="auto" poster="${asset("assets/hello-loop.jpg")}">
-    <source src="${asset("assets/hello-loop.mp4")}" type="video/mp4" />
+  const poster = filmPoster();
+  return `<img class="film-still" src="${poster}" alt="" />
+    <video class="film-bg" autoplay muted loop playsinline webkit-playsinline preload="auto" poster="${poster}">
+    <source src="${filmSrc()}" type="video/mp4" />
   </video>`;
 }
 
 function playFilmBg() {
+  warmFilmBg();
   document.querySelectorAll(".film-bg").forEach((video) => {
     video.muted = true;
     video.defaultMuted = true;
@@ -885,9 +912,19 @@ function playFilmBg() {
     video.playsInline = true;
     video.setAttribute("playsinline", "");
     video.setAttribute("webkit-playsinline", "");
-    const start = () => video.play().catch(() => {});
+    const reveal = () => {
+      if (video.readyState >= 2) video.classList.add("is-on");
+    };
+    const start = () => {
+      video.play().then(reveal).catch(() => {});
+    };
     start();
+    video.addEventListener("loadeddata", () => {
+      reveal();
+      start();
+    }, { once: true });
     video.addEventListener("canplay", start, { once: true });
+    video.addEventListener("playing", reveal, { once: true });
   });
 }
 
@@ -1960,6 +1997,7 @@ function bindStart() {
   document.querySelectorAll("#toFree").forEach((el) => { el.onclick = goCourse; });
   if (courseNav) courseNav.onclick = goCourse;
   protectLessonVideo();
+  warmFilmBg();
 }
 
 function bindHello() {
@@ -3145,7 +3183,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=53").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=54").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
@@ -3176,6 +3214,7 @@ if (course && $app) {
   bindCookie();
   bindPwa();
   bindRailHide();
+  warmFilmBg();
   route();
   if (hasAccess()) hydrateProfile();
 } else if ($app) {

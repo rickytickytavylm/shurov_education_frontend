@@ -1,15 +1,16 @@
-const CACHE = "se-cabinet-v53";
+const CACHE = "se-cabinet-v54";
 const CORE = [
   "./",
   "index.html",
-  "styles.css?v=70",
-  "app.js?v=73",
+  "styles.css?v=72",
+  "app.js?v=75",
   "course.js?v=19",
   "config.js?v=7",
   "manifest.webmanifest",
   "apple-touch-icon.png",
   "assets/pwa-192.png",
   "assets/apple-touch-icon.png",
+  "assets/hello-loop.jpg",
 ];
 
 self.addEventListener("install", (event) => {
