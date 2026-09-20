@@ -534,7 +534,15 @@ function pinAppShell() {
     const offsetTop = vv ? vv.offsetTop : 0;
     const inset = Math.max(0, Math.round(layout - visual - offsetTop));
     const kira = document.body.classList.contains("is-kira");
-    const keyboard = kira && inset > 80;
+    const active = document.activeElement;
+    const typing = Boolean(
+      active &&
+      (active.tagName === "TEXTAREA" || active.tagName === "INPUT") &&
+      active.type !== "checkbox" &&
+      active.type !== "radio" &&
+      active.type !== "button"
+    );
+    const keyboard = inset > 80 && (kira || typing);
     document.body.classList.toggle("kb-open", keyboard);
     document.documentElement.style.removeProperty("--app-h");
     document.documentElement.style.removeProperty("--vv-top");
@@ -554,6 +562,8 @@ function pinAppShell() {
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", pinAppShell, { passive: true });
   }
+  document.addEventListener("focusin", apply, true);
+  document.addEventListener("focusout", () => setTimeout(apply, 80), true);
 }
 
 function revealReply(id) {
@@ -1098,8 +1108,9 @@ function lectureHtml(module, lesson) {
   const hw = homework[lesson.id] || { text: "", review: null };
   const task = lesson.homework || { prompt: "Опишите одним абзацем, что для вас сейчас самое важное в этой теме.", hint: "Пишите факт: время, место, действие." };
   const goals = goalsHtml(lesson.goals || module.goals || []);
+  const poster = lesson.poster || (lesson.id === "m1-l1" ? "assets/m1-l1-poster.jpg" : "");
   const video = lesson.videoUrl
-    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture src="${esc(lesson.videoUrl)}"></video></div>`
+    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture${poster ? ` poster="${asset(poster)}"` : ""} src="${esc(lesson.videoUrl)}"></video></div>`
     : "";
   return `
     ${lessonHead(module, lesson)}
@@ -1110,7 +1121,7 @@ function lectureHtml(module, lesson) {
       <h3>О чём этот урок</h3>
       <div class="lecture">${lectureBlocks(lesson.lecture)}</div>
     </section>
-    <section class="section">
+    <section class="section hw-sec">
       <div class="section-label">Ваш ответ</div>
       <h3>Практическое задание</h3>
       <div class="hw">
@@ -1191,16 +1202,36 @@ function finalVerdictHtml(score, passAt) {
   </div>`;
 }
 
+function surveyNeed(optional) {
+  return optional
+    ? `<span class="survey-need is-opt">необязательно</span>`
+    : `<span class="survey-need">обязательно</span>`;
+}
+
+function surveyHead(text, optional) {
+  return `<span class="survey-q-head"><span class="survey-q-text">${text}</span>${surveyNeed(optional)}</span>`;
+}
+
+function otherIsOn(field, val) {
+  if (field.kind === "multi") return (val || []).includes("Другое");
+  return val === "Другое";
+}
+
+function surveyOtherHtml(field, draft, val) {
+  const has = field.other || (field.options || []).includes("Другое");
+  if (!has) return "";
+  return `<label class="survey-other-wrap${otherIsOn(field, val) ? " is-open" : ""}" data-other-wrap="${esc(field.id)}">
+    ${surveyHead("Если другое — напишите своими словами", true)}
+    <input class="survey-other" data-other="${esc(field.id)}" placeholder="Коротко, своими словами" value="${esc((draft.others || {})[field.id] || "")}" />
+  </label>`;
+}
+
 function surveyFieldHtml(field, draft) {
   const answers = draft.answers || {};
-  const others = draft.others || {};
   const val = answers[field.id];
-  const otherBox =
-    field.other || (field.options || []).includes("Другое")
-      ? `<input class="survey-other" data-other="${esc(field.id)}" placeholder="Если другое, напишите здесь" value="${esc(others[field.id] || "")}" />`
-      : "";
+  const otherBox = surveyOtherHtml(field, draft, val);
   if (field.kind === "text") {
-    return `<label class="survey-q"><span>${esc(field.q)}</span>
+    return `<label class="survey-q" data-q="${esc(field.id)}">${surveyHead(esc(field.q), field.optional)}
       <textarea data-text="${esc(field.id)}" placeholder="Ответ своими словами">${esc(val || "")}</textarea>
     </label>`;
   }
@@ -1210,7 +1241,7 @@ function surveyFieldHtml(field, draft) {
     const nums = Array.from({ length: max - min + 1 }, (_, i) => min + i)
       .map((n) => `<button type="button" class="scale-n${val === n ? " on" : ""}" data-scale="${esc(field.id)}" data-n="${n}">${n}</button>`)
       .join("");
-    return `<div class="survey-q"><span>${esc(field.q)}</span><div class="scale-row">${nums}</div></div>`;
+    return `<div class="survey-q" data-q="${esc(field.id)}">${surveyHead(esc(field.q), field.optional)}<div class="scale-row">${nums}</div></div>`;
   }
   if (field.kind === "scale-group") {
     const rows = (field.items || [])
@@ -1220,14 +1251,15 @@ function surveyFieldHtml(field, draft) {
         return `<div class="scale-item"><p>${esc(item)}</p><div class="scale-row">${nums}</div></div>`;
       })
       .join("");
-    return `<div class="survey-q"><span>${esc(field.q)}</span>${rows}</div>`;
+    return `<div class="survey-q" data-q="${esc(field.id)}">${surveyHead(esc(field.q), field.optional)}${rows}</div>`;
   }
   const multi = field.kind === "multi";
   const selected = multi ? new Set(val || []) : new Set(val != null && val !== "" ? [val] : []);
   const opts = (field.options || [])
     .map((opt) => `<button type="button" class="choice${selected.has(opt) ? " on" : ""}" data-field="${esc(field.id)}" data-kind="${multi ? "multi" : "single"}" data-val="${esc(opt)}">${esc(opt)}</button>`)
     .join("");
-  return `<div class="survey-q"><span>${esc(field.q)}${multi && field.max ? " До " + field.max + "." : ""}</span>
+  const extra = multi && field.max ? " До " + field.max + "." : "";
+  return `<div class="survey-q" data-q="${esc(field.id)}">${surveyHead(esc(field.q) + extra, field.optional)}
     <div class="choices">${opts}</div>${otherBox}</div>`;
 }
 
@@ -1247,11 +1279,15 @@ function surveyHtml(module, lesson) {
       <div class="section-label">Анкета</div>
       <h3>${esc(spec.title)}</h3>
       <p class="lede">${esc(spec.lead)}</p>
-      <form id="surveyForm" class="survey-form">${blocks}
-        <p class="form-err" id="surveyErr" hidden>Пожалуйста, заполните все пункты анкеты перед отправкой.</p>
+      <form id="surveyForm" class="survey-form">
+        <p class="survey-legend">Все вопросы обязательны. Поле «другое» откроется, только если выберете этот вариант — его можно оставить пустым.</p>
+        ${blocks}
+        <div class="survey-foot">
+        <p class="form-err" id="surveyErr" hidden>Отметьте или напишите ответ в каждом обязательном пункте.</p>
         <div class="row">
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить</button>`}
           ${nextCta(module, lesson)}
+        </div>
         </div>
         <div class="reply-slot" id="surveyThread">${draft.submitted && !draft.review ? `<div class="cert-saved">Анкета сохранена в профиле — та же, что на старте.</div>` : ""}${reviewCard(draft.review, "Разбор Киры AI", "surveyReply")}</div>
       </form>
@@ -1291,10 +1327,14 @@ function introSurveyPanel() {
     <div class="tool-box cert-box" id="introSurveyBox">
       <h4>${esc(spec.title)}</h4>
       <p class="cert-lead">${esc(spec.lead)}</p>
-      <form id="surveyForm" class="survey-form">${blocks}
-        <p class="form-err" id="surveyErr" hidden>Пожалуйста, заполните все пункты анкеты перед отправкой.</p>
+      <form id="surveyForm" class="survey-form">
+        <p class="survey-legend">Все вопросы обязательны. Поле «другое» откроется, только если выберете этот вариант — его можно оставить пустым.</p>
+        ${blocks}
+        <div class="survey-foot">
+        <p class="form-err" id="surveyErr" hidden>Отметьте или напишите ответ в каждом обязательном пункте.</p>
         <div class="row">
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">сохранить анкету</button>`}
+        </div>
         </div>
         <div class="reply-slot" id="surveyThread">${done ? `<div class="cert-saved" id="surveySaved">Готово. Анкета сохранена в вашем профиле.</div>` : ""}</div>
       </form>
@@ -1401,14 +1441,14 @@ function guideHtml() {
       </div>
     </section>
 
-    <section class="section">
+    <section class="section is-tight">
       <div class="section-label">Ваша точка старта</div>
       <h3>Расскажите, с чем вы приходите на курс</h3>
       <p class="lede">Анкета поможет зафиксировать исходную ситуацию и главный запрос на ближайшие четыре недели. В конце курса вы сможете сравнить ответы и увидеть изменения.</p>
       ${introSurveyPanel()}
     </section>
 
-    <section class="section">
+    <section class="section is-support">
       <div class="section-label">Поддержка</div>
       <h3>На этом пути вы не одни</h3>
       <div class="guide-team">
@@ -1527,24 +1567,26 @@ function libraryHtml() {
     ${blocks}`;
 }
 
+function kiraPillsHtml() {
+  return `<div class="kira-pills" id="kiraPills">
+      <button type="button" data-q="Что в этом курсе называется созависимостью?">Что такое созависимость</button>
+      <button type="button" data-q="Где граница между заботой и спасательством?">Забота или спасательство</button>
+      <button type="button" data-q="Как удержать границу, если накрывает вина?">Граница и вина</button>
+      <button type="button" data-q="Разбери треугольник Карпмана простыми словами.">Треугольник Карпмана</button>
+    </div>`;
+}
+
 function kiraHtml() {
   const msgs = kira.map((m) => kiraMsgHtml(m)).join("");
   return `
     <div class="kira-page">
-    <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
-    <h2>Кира AI</h2>
-    <p class="lede">Куратор кабинета: знает Старт, модуль 1, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда.</p>
-    <div class="kira-pills">
-      <button type="button" data-q="Что в этом курсе называется созависимостью?">Созависимость</button>
-      <button type="button" data-q="Где граница между заботой и спасательством?">Спасательство</button>
-      <button type="button" data-q="Как удержать границу, если накрывает вина?">Границы</button>
-      <button type="button" data-q="Разбери треугольник Карпмана простыми словами.">Карпман</button>
-    </div>
+    <h2>Кира</h2>
     <div class="chat-wrap kira-wrap">
-      <div class="chat-log" id="kiraLog">${msgs}</div>
+      <div class="chat-log" id="kiraLog">${msgs || `<div class="kira-empty" id="kiraEmpty"><p>Разберём лекцию, задание или ваш эпизод. Пишите как есть — без правильных формулировок.</p></div>`}</div>
+      ${kiraPillsHtml()}
       <form class="chat-in gpt-in" id="kiraForm">
         <div class="gpt-box">
-          <textarea name="text" rows="1" autocomplete="off" enterkeyhint="enter" inputmode="text" placeholder="Спросите что угодно"></textarea>
+          <textarea name="text" rows="1" autocomplete="off" enterkeyhint="send" inputmode="text" placeholder="Спросите Киру"></textarea>
           <button class="gpt-send" type="submit" aria-label="Отправить">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0-12 5 5m-5-5-5 5M6 20h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -1884,28 +1926,7 @@ function bindPay() {
 }
 
 function bindRailHide() {
-  if (window.SE_RAIL_BOUND) return;
-  window.SE_RAIL_BOUND = true;
-  let last = 0;
-  const apply = (y) => {
-    if (!document.querySelector(".lesson-rail")) {
-      document.body.classList.remove("rail-slim");
-      last = y;
-      return;
-    }
-    if (y < 16) document.body.classList.remove("rail-slim");
-    else if (y > last + 8) document.body.classList.add("rail-slim");
-    else if (y < last - 8) document.body.classList.remove("rail-slim");
-    last = y;
-  };
-  document.addEventListener(
-    "scroll",
-    (e) => {
-      const main = e.target && e.target.closest ? e.target.closest(".main") : null;
-      if (main) apply(main.scrollTop);
-    },
-    { passive: true, capture: true }
-  );
+  document.body.classList.remove("rail-slim");
 }
 
 function bindShell() {
@@ -2051,6 +2072,27 @@ function bindSurvey(lesson) {
   const draft = surveyState[lesson.id];
   const onStart = Boolean(document.getElementById("introSurveyBox"));
   const persist = () => save(LS.survey, surveyState);
+  const paintField = (id, kind) => {
+    const box = form.querySelector(`[data-q="${id}"]`);
+    if (box) box.classList.remove("is-miss");
+    const wrap = form.querySelector(`[data-other-wrap="${id}"]`);
+    if (wrap) {
+      const on = kind === "multi"
+        ? (draft.answers[id] || []).includes("Другое")
+        : draft.answers[id] === "Другое";
+      wrap.classList.toggle("is-open", on);
+    }
+  };
+  const missField = (fieldId) => {
+    form.querySelectorAll(".survey-q.is-miss").forEach((el) => el.classList.remove("is-miss"));
+    const box = form.querySelector(`[data-q="${fieldId}"]`);
+    if (box) {
+      box.classList.add("is-miss");
+      box.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const err = document.getElementById("surveyErr");
+    if (err) err.hidden = false;
+  };
 
   form.querySelectorAll("button[data-field]").forEach((btn) => {
     btn.onclick = () => {
@@ -2079,6 +2121,7 @@ function bindSurvey(lesson) {
           if (b.dataset.field === id) b.classList.toggle("on", b === btn);
         });
       }
+      paintField(id, kind);
     };
   });
   form.querySelectorAll("button[data-scale]").forEach((btn) => {
@@ -2088,6 +2131,7 @@ function bindSurvey(lesson) {
       persist();
       const row = btn.closest(".scale-row") || btn.parentElement;
       row.querySelectorAll("button[data-scale]").forEach((b) => b.classList.toggle("on", b === btn));
+      paintField(btn.dataset.scale);
     };
   });
   form.querySelectorAll("button[data-sg]").forEach((btn) => {
@@ -2107,6 +2151,7 @@ function bindSurvey(lesson) {
     el.oninput = () => {
       draft.answers[el.dataset.text] = el.value;
       persist();
+      paintField(el.dataset.text);
     };
   });
   form.querySelectorAll("[data-other]").forEach((el) => {
@@ -2127,35 +2172,32 @@ function bindSurvey(lesson) {
   form.onsubmit = async (e) => {
     e.preventDefault();
     const fields = spec.blocks.flatMap((b) => b.fields);
+    form.querySelectorAll(".survey-q.is-miss").forEach((el) => el.classList.remove("is-miss"));
     for (const field of fields) {
+      if (field.optional) continue;
       const val = draft.answers[field.id];
       if (field.kind === "text") {
         if (!String(val || "").trim()) {
-          const err = document.getElementById("surveyErr");
-          if (err) err.hidden = false;
+          missField(field.id);
           return;
         }
       } else if (field.kind === "multi") {
         if (!val || !val.length) {
-          const err = document.getElementById("surveyErr");
-          if (err) err.hidden = false;
+          missField(field.id);
           return;
         }
       } else if (field.kind === "scale") {
         if (val == null || val === "") {
-          const err = document.getElementById("surveyErr");
-          if (err) err.hidden = false;
+          missField(field.id);
           return;
         }
       } else if (field.kind === "scale-group") {
         if (!Array.isArray(val) || field.items.some((_, i) => val[i] == null)) {
-          const err = document.getElementById("surveyErr");
-          if (err) err.hidden = false;
+          missField(field.id);
           return;
         }
       } else if (val == null || val === "") {
-        const err = document.getElementById("surveyErr");
-        if (err) err.hidden = false;
+        missField(field.id);
         return;
       }
     }
@@ -2246,6 +2288,8 @@ async function askKira(text) {
     save(LS.kira, kira.filter((m) => m.id !== "think"));
     const log = document.getElementById("kiraLog");
     if (log) {
+      const empty = document.getElementById("kiraEmpty");
+      if (empty) empty.remove();
       log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
       setKiraLive(replyId, { think: true });
     } else {

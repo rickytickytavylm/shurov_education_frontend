@@ -20,6 +20,8 @@
 
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; overflow-x: hidden; background: #17151b; }
+html:has(.app),
+html:has(.app) body { background: #f7f4ee; }
 html, body {
   margin: 0;
   min-height: 100%;
@@ -394,8 +396,8 @@ h3 {
   height: auto;
   min-height: 180px;
   aspect-ratio: 16 / 9;
-  object-fit: contain;
-  background: #111015;
+  object-fit: cover;
+  background: #1a1418;
   pointer-events: auto;
 }
 .video.is-live video::-webkit-media-controls-download-button,
@@ -2051,7 +2053,11 @@ html, body { background: var(--snow); color: var(--ink); }
     margin: 0 0 8px;
     font-size: 22px;
   }
-  body.is-kira .kira-pills { display: none; }
+  body.is-kira .kira-pills {
+    display: flex;
+    flex: 0 0 auto;
+    margin: 0 0 8px;
+  }
   body.is-kira .chat-wrap {
     flex: 1 1 0;
     min-height: 0;
@@ -2819,4 +2825,137 @@ body.pwa-open { overflow: hidden; }
   .guide-feat.is-rev .guide-shot { order: 2; }
   .guide-feat.is-rev > div { order: 1; }
   .guide-feat .guide-facts { grid-template-columns: 1fr; }
+}
+
+html:has(.app),
+body:has(.app) { background: #f7f4ee; }
+@media (display-mode: standalone) {
+  html, body { background: #f7f4ee; }
+  html:has(.app),
+  body:has(.app),
+  body:has(.app) #app {
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    background: #f7f4ee;
+  }
+}
+
+body.rail-slim .lesson-rail,
+body.rail-slim .step-rail {
+  max-height: none !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  opacity: 1 !important;
+  border-bottom-width: 1px !important;
+  pointer-events: auto !important;
+}
+
+.survey-legend {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #efeaf8;
+  color: #3d344f;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.survey-q {
+  margin: 0 0 32px;
+}
+.survey-q-head,
+.survey-q .survey-q-head {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+  font-weight: 400;
+}
+.survey-q-text {
+  display: block;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.survey-need {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #78699d;
+}
+.survey-need.is-opt { color: #8a8490; }
+.survey-q.is-miss .survey-q-text { color: #8a3a3a; }
+.survey-q.is-miss textarea,
+.survey-q.is-miss .choices {
+  box-shadow: inset 0 0 0 1.5px #c17a7a;
+}
+.survey-other-wrap { display: none; margin-top: 12px; }
+.survey-other-wrap.is-open { display: block; }
+.survey-foot { margin-top: 4px; }
+.section.is-tight { margin-bottom: 20px; }
+.section.is-support { margin-top: 0; margin-bottom: 24px; }
+.hw-sec { scroll-margin-top: 16px; }
+
+.kira-empty {
+  margin: auto 0;
+  padding: 28px 4px 16px;
+  color: #5b5660;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.kira-empty p { margin: 0; max-width: 28em; }
+
+@media (max-width: 720px) {
+  .section.is-tight { margin-bottom: 14px; }
+  .section.is-support { margin-bottom: 16px; }
+  .section.is-support h3 { font-size: 24px; }
+  .survey-q { margin: 0 0 28px; }
+  .survey-q-text { font-size: 16px; }
+  .survey-block { padding: 18px 14px 4px; background: #fff; box-shadow: 0 0 0 1px rgba(23, 21, 27, 0.06); }
+  .survey-form .choice { min-height: 46px; }
+  .survey-foot {
+    position: sticky;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 8;
+    margin: 8px -4px 0;
+    padding: 12px 4px 6px;
+    background: linear-gradient(180deg, rgba(247, 244, 238, 0), #f7f4ee 22%);
+  }
+  body.kb-open .survey-foot { bottom: 8px; }
+  body.kb-open:not(.is-kira) .main { padding-bottom: 24px; }
+  #introSurveyBox .survey-foot {
+    background: linear-gradient(180deg, rgba(247, 244, 238, 0), #f7f4ee 22%);
+  }
+  .hw-sec { scroll-margin-top: 8px; }
+
+  body.is-kira .kira-pills {
+    display: flex !important;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 8px;
+  }
+  body.is-kira .kira-pills button {
+    flex: 1 1 calc(50% - 8px);
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(23, 21, 27, 0.08);
+    color: #3d344f;
+    font-size: 13px;
+    line-height: 1.25;
+    text-align: left;
+  }
+  body.is-kira .kira-page > h2 {
+    font-size: 20px;
+    margin: 0 0 6px;
+  }
 }
