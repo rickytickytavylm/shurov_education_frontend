@@ -734,12 +734,21 @@ function render(opts) {
   }
   if (keepScroll) setScrollY(y, "instant");
   if (focus) requestAnimationFrame(() => revealReply(focus));
-  if (view === "lesson") requestAnimationFrame(pinStepRail);
+  if (view === "lesson") requestAnimationFrame(() => requestAnimationFrame(pinLessonRails));
 }
 
-function pinStepRail() {
-  const on = document.querySelector(".step-rail a.on");
-  if (on) on.scrollIntoView({ inline: "center", block: "nearest" });
+function pinRailStart(rail) {
+  if (!rail) return;
+  const on = rail.querySelector("a.on");
+  if (!on) return;
+  const pad = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+  const shift = on.getBoundingClientRect().left - rail.getBoundingClientRect().left - pad;
+  rail.scrollLeft = Math.max(0, rail.scrollLeft + shift);
+}
+
+function pinLessonRails() {
+  pinRailStart(document.querySelector(".lesson-rail"));
+  pinRailStart(document.querySelector(".step-rail"));
 }
 
 function startHtml() {
@@ -1187,7 +1196,7 @@ function lectureWatchHtml(module, lesson) {
   const goals = goalsHtml(lesson.goals || module.goals || []);
   const poster = lesson.poster || (lesson.id === "m1-l1" ? "assets/m1-l1-poster.jpg" : "");
   const video = lesson.videoUrl
-    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture${poster ? ` poster="${asset(poster)}"` : ""} src="${esc(lesson.videoUrl)}"></video></div>`
+    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate" disablepictureinpicture${poster ? ` poster="${asset(poster)}"` : ""} src="${esc(lesson.videoUrl)}"></video></div>`
     : "";
   return `
     ${lessonHead(module, lesson)}
@@ -3112,7 +3121,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=51").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=52").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
