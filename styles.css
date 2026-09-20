@@ -2053,11 +2053,7 @@ html, body { background: var(--snow); color: var(--ink); }
     margin: 0 0 8px;
     font-size: 22px;
   }
-  body.is-kira .kira-pills {
-    display: flex;
-    flex: 0 0 auto;
-    margin: 0 0 8px;
-  }
+  body.is-kira .kira-pills { display: none; }
   body.is-kira .chat-wrap {
     flex: 1 1 0;
     min-height: 0;
@@ -2902,19 +2898,9 @@ body.rail-slim .step-rail {
 }
 .survey-other-wrap { display: none; margin-top: 12px; }
 .survey-other-wrap.is-open { display: block; }
-.survey-foot { margin-top: 4px; }
 .section.is-tight { margin-bottom: 20px; }
 .section.is-support { margin-top: 0; margin-bottom: 24px; }
 .hw-sec { scroll-margin-top: 16px; }
-
-.kira-empty {
-  margin: auto 0;
-  padding: 28px 4px 16px;
-  color: #5b5660;
-  font-size: 16px;
-  line-height: 1.5;
-}
-.kira-empty p { margin: 0; max-width: 28em; }
 
 @media (max-width: 720px) {
   .section.is-tight { margin-bottom: 14px; }
@@ -2924,42 +2910,6 @@ body.rail-slim .step-rail {
   .survey-q-text { font-size: 16px; }
   .survey-block { padding: 18px 14px 4px; background: #fff; box-shadow: 0 0 0 1px rgba(23, 21, 27, 0.06); }
   .survey-form .choice { min-height: 46px; }
-  .survey-foot {
-    position: sticky;
-    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    z-index: 8;
-    margin: 8px -4px 0;
-    padding: 12px 4px 6px;
-    background: linear-gradient(180deg, rgba(247, 244, 238, 0), #f7f4ee 22%);
-  }
-  body.kb-open .survey-foot { bottom: 8px; }
   body.kb-open:not(.is-kira) .main { padding-bottom: 24px; }
-  #introSurveyBox .survey-foot {
-    background: linear-gradient(180deg, rgba(247, 244, 238, 0), #f7f4ee 22%);
-  }
   .hw-sec { scroll-margin-top: 8px; }
-
-  body.is-kira .kira-pills {
-    display: flex !important;
-    flex: 0 0 auto;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0 0 8px;
-  }
-  body.is-kira .kira-pills button {
-    flex: 1 1 calc(50% - 8px);
-    min-height: 44px;
-    padding: 8px 10px;
-    border-radius: 14px;
-    background: #fff;
-    box-shadow: 0 0 0 1px rgba(23, 21, 27, 0.08);
-    color: #3d344f;
-    font-size: 13px;
-    line-height: 1.25;
-    text-align: left;
-  }
-  body.is-kira .kira-page > h2 {
-    font-size: 20px;
-    margin: 0 0 6px;
-  }
 }

@@ -1282,12 +1282,10 @@ function surveyHtml(module, lesson) {
       <form id="surveyForm" class="survey-form">
         <p class="survey-legend">Все вопросы обязательны. Поле «другое» откроется, только если выберете этот вариант — его можно оставить пустым.</p>
         ${blocks}
-        <div class="survey-foot">
         <p class="form-err" id="surveyErr" hidden>Отметьте или напишите ответ в каждом обязательном пункте.</p>
         <div class="row">
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">отправить</button>`}
           ${nextCta(module, lesson)}
-        </div>
         </div>
         <div class="reply-slot" id="surveyThread">${draft.submitted && !draft.review ? `<div class="cert-saved">Анкета сохранена в профиле — та же, что на старте.</div>` : ""}${reviewCard(draft.review, "Разбор Киры AI", "surveyReply")}</div>
       </form>
@@ -1330,11 +1328,9 @@ function introSurveyPanel() {
       <form id="surveyForm" class="survey-form">
         <p class="survey-legend">Все вопросы обязательны. Поле «другое» откроется, только если выберете этот вариант — его можно оставить пустым.</p>
         ${blocks}
-        <div class="survey-foot">
         <p class="form-err" id="surveyErr" hidden>Отметьте или напишите ответ в каждом обязательном пункте.</p>
         <div class="row">
           ${done ? `<button class="btn ghost" type="button" id="surveyRetry">редактировать ответы</button>` : `<button class="btn" type="submit" id="surveySend">сохранить анкету</button>`}
-        </div>
         </div>
         <div class="reply-slot" id="surveyThread">${done ? `<div class="cert-saved" id="surveySaved">Готово. Анкета сохранена в вашем профиле.</div>` : ""}</div>
       </form>
@@ -1567,26 +1563,24 @@ function libraryHtml() {
     ${blocks}`;
 }
 
-function kiraPillsHtml() {
-  return `<div class="kira-pills" id="kiraPills">
-      <button type="button" data-q="Что в этом курсе называется созависимостью?">Что такое созависимость</button>
-      <button type="button" data-q="Где граница между заботой и спасательством?">Забота или спасательство</button>
-      <button type="button" data-q="Как удержать границу, если накрывает вина?">Граница и вина</button>
-      <button type="button" data-q="Разбери треугольник Карпмана простыми словами.">Треугольник Карпмана</button>
-    </div>`;
-}
-
 function kiraHtml() {
   const msgs = kira.map((m) => kiraMsgHtml(m)).join("");
   return `
     <div class="kira-page">
-    <h2>Кира</h2>
+    <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
+    <h2>Кира AI</h2>
+    <p class="lede">Куратор кабинета: знает Старт, модуль 1, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда.</p>
+    <div class="kira-pills">
+      <button type="button" data-q="Что в этом курсе называется созависимостью?">Созависимость</button>
+      <button type="button" data-q="Где граница между заботой и спасательством?">Спасательство</button>
+      <button type="button" data-q="Как удержать границу, если накрывает вина?">Границы</button>
+      <button type="button" data-q="Разбери треугольник Карпмана простыми словами.">Карпман</button>
+    </div>
     <div class="chat-wrap kira-wrap">
-      <div class="chat-log" id="kiraLog">${msgs || `<div class="kira-empty" id="kiraEmpty"><p>Разберём лекцию, задание или ваш эпизод. Пишите как есть — без правильных формулировок.</p></div>`}</div>
-      ${kiraPillsHtml()}
+      <div class="chat-log" id="kiraLog">${msgs}</div>
       <form class="chat-in gpt-in" id="kiraForm">
         <div class="gpt-box">
-          <textarea name="text" rows="1" autocomplete="off" enterkeyhint="send" inputmode="text" placeholder="Спросите Киру"></textarea>
+          <textarea name="text" rows="1" autocomplete="off" enterkeyhint="enter" inputmode="text" placeholder="Спросите что угодно"></textarea>
           <button class="gpt-send" type="submit" aria-label="Отправить">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v12m0-12 5 5m-5-5-5 5M6 20h12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -2288,8 +2282,6 @@ async function askKira(text) {
     save(LS.kira, kira.filter((m) => m.id !== "think"));
     const log = document.getElementById("kiraLog");
     if (log) {
-      const empty = document.getElementById("kiraEmpty");
-      if (empty) empty.remove();
       log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
       setKiraLive(replyId, { think: true });
     } else {
