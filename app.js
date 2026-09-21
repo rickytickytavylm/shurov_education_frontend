@@ -562,10 +562,9 @@ function pinAppShell() {
   const apply = () => {
     const vv = window.visualViewport;
     const layout = window.innerHeight || 0;
-    const visual = vv ? vv.height : layout;
-    const offsetTop = vv ? vv.offsetTop : 0;
+    const visual = Math.round(vv ? vv.height : layout);
+    const offsetTop = Math.max(0, Math.round(vv ? vv.offsetTop : 0));
     const inset = Math.max(0, Math.round(layout - visual - offsetTop));
-    const kira = document.body.classList.contains("is-kira");
     const active = document.activeElement;
     const typing = Boolean(
       active &&
@@ -574,15 +573,12 @@ function pinAppShell() {
       active.type !== "radio" &&
       active.type !== "button"
     );
-    const keyboard = inset > 80 && (kira || typing);
+    if (!typing) window.SE_APP_BASE_H = Math.max(layout, visual);
+    const base = window.SE_APP_BASE_H || Math.max(layout, visual);
+    const keyboard = typing && (base - visual > 80 || inset > 80);
     document.body.classList.toggle("kb-open", keyboard);
-    document.documentElement.style.removeProperty("--app-h");
-    document.documentElement.style.removeProperty("--vv-top");
-    if (keyboard) {
-      document.documentElement.style.setProperty("--kb-inset", inset + "px");
-    } else {
-      document.documentElement.style.removeProperty("--kb-inset");
-    }
+    document.documentElement.style.setProperty("--app-h", visual + "px");
+    document.documentElement.style.setProperty("--vv-top", offsetTop + "px");
     const theme = document.querySelector('meta[name="theme-color"]');
     if (theme) theme.setAttribute("content", "#ffffff");
   };
@@ -590,9 +586,13 @@ function pinAppShell() {
   if (window.SE_VV_BOUND) return;
   window.SE_VV_BOUND = true;
   window.addEventListener("resize", pinAppShell, { passive: true });
-  window.addEventListener("orientationchange", pinAppShell);
+  window.addEventListener("orientationchange", () => {
+    window.SE_APP_BASE_H = 0;
+    setTimeout(pinAppShell, 120);
+  });
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", pinAppShell, { passive: true });
+    window.visualViewport.addEventListener("scroll", pinAppShell, { passive: true });
   }
   document.addEventListener("focusin", apply, true);
   document.addEventListener("focusout", () => setTimeout(apply, 80), true);
@@ -1071,7 +1071,7 @@ function shellHtml(inner) {
   const steps = lecture
     ? [
         { step: "watch", title: "Материал" },
-        { step: "task", title: "Задание с Кирой" },
+        { step: "task", title: "Домашнее задание" },
       ]
         .map((item) => {
           const on = view === "lesson" && stage === item.step ? " on" : "";
@@ -1794,6 +1794,10 @@ function atlasHtml() {
             <h4>Простыми словами</h4>
             <p>${esc(item.plain)}</p>
           </section>
+          ${item.example ? `<section class="atlas-block atlas-example">
+            <h4>Разбор жизненной ситуации</h4>
+            <p>${esc(item.example)}</p>
+          </section>` : ""}
           <section class="atlas-block">
             <h4>Как это выглядит в жизни</h4>
             <ul class="atlas-signs">${(item.signs || []).map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
@@ -1802,10 +1806,18 @@ function atlasHtml() {
             <h4>Почему это держится</h4>
             <p>${esc(item.why)}</p>
           </section>
+          ${(item.questions || []).length ? `<section class="atlas-block atlas-questions">
+            <h4>Вопросы для самопроверки</h4>
+            <ol>${item.questions.map((q) => `<li>${esc(q)}</li>`).join("")}</ol>
+          </section>` : ""}
           <section class="atlas-block atlas-shift">
             <h4>Что меняет курс</h4>
             <p>${esc(item.shift)}</p>
           </section>
+          ${item.practice ? `<section class="atlas-block atlas-practice">
+            <h4>Попробуйте сегодня</h4>
+            <p>${esc(item.practice)}</p>
+          </section>` : ""}
           <p class="atlas-link"><span>Где в курсе</span>${esc(item.link)}</p>
         </div>
       </article>`
@@ -1814,7 +1826,7 @@ function atlasHtml() {
   return `
     <p class="crumb">Разбор · как устроены отношения</p>
     <h2>Как это устроено</h2>
-    <p class="lede">Четырнадцать схем, по которым живут созависимые отношения. Каждая разобрана одинаково: что это простыми словами, как выглядит в жизни, почему держится и что с этим делает курс. Это учебный материал, не диагностика.</p>
+    <p class="lede">Четырнадцать схем, по которым живут созависимые отношения. В каждой — объяснение простыми словами, жизненный разбор, признаки, механизм, вопросы для самопроверки и практика на сегодня. Это учебный материал, не диагностика.</p>
     <nav class="atlas-toc" aria-label="Список схем">${toc}</nav>
     ${cards}`;
 }
@@ -2233,6 +2245,12 @@ function bindLessonKira(lesson) {
   };
   if (box) {
     box.addEventListener("input", grow);
+    box.addEventListener("focus", () => {
+      setTimeout(() => {
+        pinAppShell();
+        if (log) log.scrollTop = log.scrollHeight;
+      }, 120);
+    });
     box.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
       const mobile = window.matchMedia("(max-width: 720px)").matches;
@@ -2617,6 +2635,12 @@ function bindKira() {
   };
   if (box) {
     box.addEventListener("input", grow);
+    box.addEventListener("focus", () => {
+      setTimeout(() => {
+        pinAppShell();
+        if (log) log.scrollTop = log.scrollHeight;
+      }, 120);
+    });
     box.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
       const mobile = window.matchMedia("(max-width: 720px)").matches;
@@ -3183,7 +3207,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=55").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=56").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());

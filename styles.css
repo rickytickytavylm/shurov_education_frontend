@@ -1608,8 +1608,30 @@ html, body { background: var(--snow); color: var(--ink); }
   height: 2px;
   background: #78699d;
 }
+.atlas-example {
+  padding: 20px 22px;
+  border-left: 3px solid #9b89c3;
+  background: #faf8fd;
+}
+.atlas-questions ol {
+  margin: 0;
+  padding-left: 24px;
+}
+.atlas-questions li {
+  margin: 0 0 10px;
+  padding-left: 5px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #39363d;
+}
 .atlas-shift { padding: 22px 24px; border-radius: 14px; background: #f7f4ee; }
 .atlas-shift h4 { color: #4d435d; }
+.atlas-practice {
+  padding: 22px 24px;
+  border-radius: 14px;
+  background: #e9e2f8;
+}
+.atlas-practice h4 { color: #4d435d; }
 .atlas-link {
   display: flex;
   flex-wrap: wrap;
@@ -2131,8 +2153,13 @@ html, body { background: var(--snow); color: var(--ink); }
 
   body.is-kira { overflow: hidden; }
   body.is-kira #app {
-    height: 100dvh;
-    max-height: 100dvh;
+    position: fixed;
+    top: var(--vv-top, 0px);
+    left: 0;
+    right: 0;
+    height: var(--app-h, 100dvh);
+    max-height: var(--app-h, 100dvh);
+    overflow: hidden;
   }
   body.is-kira .app {
     position: relative;
@@ -2143,7 +2170,7 @@ html, body { background: var(--snow); color: var(--ink); }
     max-height: 100%;
     display: flex;
     flex-direction: column;
-    padding-bottom: var(--kb-inset, 0px);
+    padding-bottom: 0;
   }
   body.is-kira .app-head { flex: 0 0 auto; }
   body.is-kira .body {
@@ -2213,6 +2240,7 @@ html, body { background: var(--snow); color: var(--ink); }
     box-shadow: 0 -10px 18px rgba(17, 14, 20, 0.04);
   }
   body.is-kira.kb-open .cookie-bar { display: none !important; }
+  body.is-kira.kb-open .app-dock { display: none !important; }
   body.has-cookie.is-kira .chat-in { bottom: auto; }
   body.has-cookie .main { padding-bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
   body.has-cookie.is-kira .main { padding-bottom: 8px; }
@@ -2221,7 +2249,9 @@ html, body { background: var(--snow); color: var(--ink); }
   .atlas-card { margin-bottom: 72px; }
   .atlas-toc { grid-template-columns: 1fr; padding: 16px; margin-bottom: 48px; }
   .atlas-block p { font-size: 16px; }
-  .atlas-shift { padding: 18px 16px; }
+  .atlas-example,
+  .atlas-shift,
+  .atlas-practice { padding: 18px 16px; }
   .free-mod {
     min-height: min(92svh, 860px);
     padding: 36px 18px 32px;
