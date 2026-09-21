@@ -1,10 +1,10 @@
-const CACHE = "se-cabinet-v54";
+const CACHE = "se-cabinet-v55";
 const CORE = [
   "./",
   "index.html",
   "styles.css?v=72",
   "app.js?v=75",
-  "course.js?v=19",
+  "course.js?v=20",
   "config.js?v=7",
   "manifest.webmanifest",
   "apple-touch-icon.png",
