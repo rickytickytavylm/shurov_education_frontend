@@ -91,6 +91,17 @@ function defaultKira() {
   ];
 }
 
+function wipeStudentChat() {
+  kira = defaultKira();
+  lessonChat = {};
+  homework = {};
+  progress = {};
+  save(LS.kira, kira);
+  save(LS.lessonChat, lessonChat);
+  save(LS.hw, homework);
+  save(LS.progress, progress);
+}
+
 function wipeKeylessSession() {
   const cookie = (() => {
     try {
@@ -2996,11 +3007,22 @@ async function syncProfile() {
 
 function applyProfile(p) {
   if (!p || typeof p !== "object") return;
+  const extra = p.extra && typeof p.extra === "object" ? p.extra : {};
+  let wiped = false;
+  if (extra.wipeChat) {
+    wipeStudentChat();
+    wiped = true;
+    extra.wipeChat = false;
+    p.extra = extra;
+    setTimeout(() => {
+      if (!hasBackend() || !accessKey()) return;
+      post("/edu/api/profile", { ...profilePayload(), homework: {}, progress: {}, extra: { ...extra, wipeChat: false } });
+    }, 0);
+  }
   if (p.user && p.user.name) {
     user = { ...user, ...p.user, id: userKey() || p.user.id, key: accessKey() };
     save(LS.user, user);
   }
-  const extra = p.extra && typeof p.extra === "object" ? p.extra : {};
   if (extra.apply && typeof extra.apply === "object") {
     apply = { ...apply, ...extra.apply };
     save(LS.apply, apply);
@@ -3026,7 +3048,7 @@ function applyProfile(p) {
     surveyState = next;
     save(LS.survey, surveyState);
   }
-  if (p.progress && typeof p.progress === "object") {
+  if (!wiped && p.progress && typeof p.progress === "object") {
     const merged = { ...p.progress, ...progress };
     Object.keys({ ...p.progress, ...progress }).forEach((k) => {
       if (p.progress[k] || progress[k]) merged[k] = true;
@@ -3034,7 +3056,7 @@ function applyProfile(p) {
     progress = merged;
     save(LS.progress, progress);
   }
-  if (p.homework && typeof p.homework === "object") {
+  if (!wiped && p.homework && typeof p.homework === "object") {
     homework = { ...p.homework, ...homework };
     save(LS.hw, homework);
   }
@@ -3220,7 +3242,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=57").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=58").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
