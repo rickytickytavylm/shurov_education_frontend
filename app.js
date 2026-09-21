@@ -1654,7 +1654,7 @@ function guideHtml() {
       </div>
       <ul class="guide-list">
         <li>Фокус-группы проходят без записи.</li>
-        <li>Чат потока: <a href="https://t.me/+DVMU-LUCStl4ZDVi" target="_blank" rel="noopener">открыть в Telegram</a></li>
+        <li>Чат потока: <a href="https://t.me/+3rUQZDsJsQA4Njcy" target="_blank" rel="noopener">открыть в Telegram</a></li>
         <li>В чате потока можно задать организационный вопрос куратору.</li>
         <li>Telegram-канал: <a href="https://t.me/shurovsos" target="_blank" rel="noopener">t.me/shurovsos</a></li>
         <li>Бот в Telegram: <a href="https://tvoi-shag.online/tlgrm?bot=getcourse_shurov_bot" target="_blank" rel="noopener">открыть</a></li>
@@ -2841,7 +2841,7 @@ function localKiraReply(text) {
     return "Границу чаще ломает не чужое давление, а вина. Первый навык: выдержать паузу после правды и не бросаться чинить чувство другого.";
   }
   if (/расписан|фокус|встреч|zoom|зум|куратор|чат поток|когда групп/i.test(q)) {
-    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с экспертами школы проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+DVMU-LUCStl4ZDVi. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модуль 1.";
+    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с экспертами школы проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+3rUQZDsJsQA4Njcy. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модуль 1.";
   }
   return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модуль 1, следующие модули скоро.";
 }
@@ -3220,7 +3220,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=61").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=62").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
