@@ -3220,7 +3220,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=59").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=60").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
