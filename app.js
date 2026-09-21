@@ -951,7 +951,20 @@ function loginHtml() {
     </div>`;
 }
 
+function greetName() {
+  const raw = String((user && user.name) || "").replace(/\s+/g, " ").trim();
+  if (!raw || /^команда\b/i.test(raw)) return "";
+  return raw.split(" ")[0];
+}
+
 function helloHtml() {
+  const who = greetName();
+  const mark = who
+    ? `${esc(who)}, вы вошли по своему ключу`
+    : "Вы ввели ключ команды доктора Шурова";
+  const title = who
+    ? `${esc(who)}, добро пожаловать на платформу курса`
+    : "Добро пожаловать на платформу курса";
   return `
     <div class="flow hello-flow">
       <picture class="hello-pic hello-still">
@@ -961,8 +974,8 @@ function helloHtml() {
       <div class="hello-shade"></div>
       <div class="flow-main hello-main">
         <p class="eye">Школа доктора Шурова</p>
-        <p class="hello-mark">Вы ввели ключ команды доктора Шурова</p>
-        <h1>Добро пожаловать на платформу курса</h1>
+        <p class="hello-mark">${mark}</p>
+        <h1>${title}</h1>
         <p class="hello-course">«Любить, не теряя себя»</p>
       </div>
     </div>`;
@@ -3207,7 +3220,7 @@ function bindPwa() {
   }
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("/sw.js?v=56").catch(() => {});
+    navigator.serviceWorker.register("/sw.js?v=57").catch(() => {});
     if (!window.SE_SW_RELOAD) {
       window.SE_SW_RELOAD = true;
       navigator.serviceWorker.addEventListener("controllerchange", () => location.reload());
