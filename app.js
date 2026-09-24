@@ -1624,7 +1624,7 @@ function guideHtml() {
           <label>ФИО / Full name*<input name="fio" type="text" autocomplete="name" value="${esc(cert.fio || "")}" placeholder="Фамилия Имя / Last name First name" /></label>
           <label>Документ: серия и номер*<input name="passport" type="text" autocomplete="off" value="${esc(cert.passport || "")}" placeholder="Паспорт РФ или ID другой страны" /></label>
           <label>Кем и когда выдан*<input name="issued" type="text" value="${esc(cert.issued || "")}" placeholder="Орган выдачи и дата / Issuing authority & date" /></label>
-          <label>Код подразделения (только РФ)<input name="code" type="text" autocomplete="off" value="${esc(cert.code || "")}" placeholder="000-000 · если нет — оставьте пустым" /></label>
+          <label>Код подразделения (только для РФ)<input name="code" type="text" autocomplete="off" value="${esc(cert.code || "")}" placeholder="000-000 · если нет — оставьте пустым" /></label>
           <label>Адрес*<input name="address" type="text" autocomplete="street-address" value="${esc(cert.address || "")}" placeholder="Город, улица / City, street, country" /></label>
           <p class="fine">Принимаются документы любой страны. Код подразделения нужен только для паспорта РФ. Если сертификат не требуется — в обязательных полях можно поставить прочерк, форму всё равно сохраните.</p>
           <p class="form-err" id="certErr" hidden>Выберите согласие или отказ и заполните обязательные поля (код подразделения — по желанию).</p>
