@@ -39,7 +39,9 @@ body {
   overscroll-behavior-y: none;
 }
 button, input, textarea, select, a, label {
-  font: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
   color: inherit;
   touch-action: manipulation;
 }
@@ -159,6 +161,7 @@ h3 {
   outline: none;
   color: #fff;
   padding: 10px 0;
+  font-size: 16px;
 }
 .dock input::placeholder { color: rgba(255, 255, 255, 0.55); }
 
@@ -2490,7 +2493,9 @@ html, body { background: var(--snow); color: var(--ink); }
   border: 1px solid rgba(23, 21, 27, 0.1);
   border-radius: 9px;
   background: #fff;
-  font: inherit;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.4;
 }
 .survey-other { min-height: 48px; margin-top: 8px; }
 .scale-row {
@@ -2948,7 +2953,9 @@ body.pwa-open { overflow: hidden; }
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #fff;
-  font: inherit;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.35;
   color: var(--ink);
 }
 .cert-form input:focus { outline: 2px solid var(--aura); outline-offset: 1px; }
