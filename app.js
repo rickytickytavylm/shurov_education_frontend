@@ -252,7 +252,8 @@ let focusCert = false;
 function certDone() {
   const picked = cert.consent === "yes" || cert.consent === "no";
   if (!picked || !cert.saved) return false;
-  return ["fio", "passport", "issued", "code", "address"].every((k) => String(cert[k] || "").trim());
+  // code (код подразделения) — только РФ, для зарубежных документов необязателен
+  return ["fio", "passport", "issued", "address"].every((k) => String(cert[k] || "").trim());
 }
 
 function introSurveyDone() {
@@ -1620,13 +1621,13 @@ function guideHtml() {
           </label>
         </div>
         <form id="certForm" class="cert-form">
-          <label>ФИО*<input name="fio" type="text" autocomplete="name" value="${esc(cert.fio || "")}" placeholder="Фамилия, имя, отчество" /></label>
-          <label>Серия и номер паспорта*<input name="passport" type="text" inputmode="numeric" value="${esc(cert.passport || "")}" placeholder="0000 000000" /></label>
-          <label>Кем и когда выдан паспорт*<input name="issued" type="text" value="${esc(cert.issued || "")}" placeholder="Орган выдачи и дата" /></label>
-          <label>Код подразделения*<input name="code" type="text" inputmode="numeric" value="${esc(cert.code || "")}" placeholder="000-000" /></label>
-          <label>Адрес регистрации*<input name="address" type="text" value="${esc(cert.address || "")}" placeholder="Город, улица, дом, квартира" /></label>
-          <p class="fine">Если сертификат не требуется, поставьте в обязательных полях прочерк. Форму всё равно нужно сохранить.</p>
-          <p class="form-err" id="certErr" hidden>Выберите согласие или отказ и заполните все поля.</p>
+          <label>ФИО / Full name*<input name="fio" type="text" autocomplete="name" value="${esc(cert.fio || "")}" placeholder="Фамилия Имя / Last name First name" /></label>
+          <label>Документ: серия и номер*<input name="passport" type="text" autocomplete="off" value="${esc(cert.passport || "")}" placeholder="Паспорт РФ или ID другой страны" /></label>
+          <label>Кем и когда выдан*<input name="issued" type="text" value="${esc(cert.issued || "")}" placeholder="Орган выдачи и дата / Issuing authority & date" /></label>
+          <label>Код подразделения (только РФ)<input name="code" type="text" autocomplete="off" value="${esc(cert.code || "")}" placeholder="000-000 · если нет — оставьте пустым" /></label>
+          <label>Адрес*<input name="address" type="text" autocomplete="street-address" value="${esc(cert.address || "")}" placeholder="Город, улица / City, street, country" /></label>
+          <p class="fine">Принимаются документы любой страны. Код подразделения нужен только для паспорта РФ. Если сертификат не требуется — в обязательных полях можно поставить прочерк, форму всё равно сохраните.</p>
+          <p class="form-err" id="certErr" hidden>Выберите согласие или отказ и заполните обязательные поля (код подразделения — по желанию).</p>
           <div class="row">
             <button class="btn" type="submit">сохранить</button>
             ${cert.saved ? `<span class="cert-saved" id="certSaved">данные сохранены</span>` : `<span class="cert-saved" id="certSaved" hidden>данные сохранены</span>`}
@@ -1710,7 +1711,7 @@ function bindGuide() {
       cert.code = String(fd.get("code") || "").trim();
       cert.address = String(fd.get("address") || "").trim();
       const err = document.getElementById("certErr");
-      if (!cert.consent || !["fio", "passport", "issued", "code", "address"].every((k) => cert[k])) {
+      if (!cert.consent || !["fio", "passport", "issued", "address"].every((k) => cert[k])) {
         if (err) err.hidden = false;
         revealReply("certBox");
         return;
