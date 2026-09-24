@@ -17,6 +17,23 @@ const LS = {
 
 const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
 const START_VIDEO = "https://storage.yandexcloud.net/fidesetratio/podvodka.mp4";
+const CF_VIDEO_KEY = "SE-MBPB-CEMK";
+const CF_BASE = "https://pub-4c7dc8be931e442885afd7530c1cb916.r2.dev";
+const CF_VIDEOS = {
+  [START_VIDEO]: CF_BASE + "/edu/podvodka.mp4",
+  "https://storage.yandexcloud.net/fidesetratio/%D0%92%D0%B5%D0%B1%D0%B8%D0%BD%D0%B0%D1%80%20%D0%A1%D0%9E%D0%97%D0%90%D0%92%D0%98%D0%A1%D0%98%D0%9C%D0%9E%D0%A1%D0%A2%D0%AC%20%D1%871%20%D0%98%D0%A2%D0%9E%D0%93.mp4":
+    CF_BASE + "/edu/webinar1.mp4",
+  "https://storage.yandexcloud.net/fidesetratio/Вебинар СОЗАВИСИМОСТЬ №1 ИТОГ.mp4":
+    CF_BASE + "/edu/webinar1.mp4",
+};
+
+function videoSrc(url) {
+  const raw = String(url || "");
+  if (!raw) return raw;
+  const key = String(typeof accessKey === "function" ? accessKey() : "").trim().toUpperCase();
+  if (key !== CF_VIDEO_KEY) return raw;
+  return CF_VIDEOS[raw] || CF_VIDEOS[decodeURI(raw)] || raw;
+}
 const INTRO_SURVEY = "m0-l3";
 const course = window.COURSE;
 const $app = document.getElementById("app");
@@ -1269,7 +1286,7 @@ function lectureWatchHtml(module, lesson) {
   const goals = goalsHtml(lesson.goals || module.goals || []);
   const poster = lesson.poster || (lesson.id === "m1-l1" ? "assets/m1-l1-poster.jpg" : "");
   const video = lesson.videoUrl
-    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate" disablepictureinpicture${poster ? ` poster="${asset(poster)}"` : ""} src="${esc(lesson.videoUrl)}"></video></div>`
+    ? `<div class="video is-live"><video controls playsinline webkit-playsinline preload="auto" controlslist="nodownload noplaybackrate" disablepictureinpicture${poster ? ` poster="${asset(poster)}"` : ""} src="${esc(videoSrc(lesson.videoUrl))}"></video></div>`
     : "";
   return `
     ${lessonHead(module, lesson)}
@@ -1547,7 +1564,7 @@ function guideHtml() {
       <p class="section-label">Обращение автора</p>
       <h3>Слово Василия Шурова перед стартом</h3>
       <div class="video is-live">
-        <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/podvodka-poster.jpg")}" src="${esc(START_VIDEO)}"></video>
+        <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${asset("assets/podvodka-poster.jpg")}" src="${esc(videoSrc(START_VIDEO))}"></video>
       </div>
       <p class="lede">Короткое видео о том, как устроен курс и с чем вы входите в программу. Дальше на этой странице маршрут, Кира и вводная анкета.</p>
     </section>
