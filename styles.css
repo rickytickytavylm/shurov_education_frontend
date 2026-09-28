@@ -1241,6 +1241,7 @@ html, body { background: var(--snow); color: var(--ink); }
 .lecture p { font-size: 18px; line-height: 1.78; color: #39363d; }
 .lecture .lec-drop::first-letter { float: left; margin: 6px 9px 0 0; font-family: var(--serif); font-size: 66px; line-height: .72; color: #78699d; }
 .lec-block { margin: 0 0 28px; }
+.lecture .lec-more { margin: -12px 0 16px; }
 .lec-block h4 {
   margin: 0 0 10px;
   font-family: var(--sans);

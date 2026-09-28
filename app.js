@@ -1511,7 +1511,7 @@ function surveyHtml(module, lesson) {
 function lectureBlocks(lecture) {
   return (lecture || [])
     .map((b, i) => {
-      if (typeof b === "string") return `<p class="${i === 0 ? "lec-drop" : ""}">${esc(b)}</p>`;
+      if (typeof b === "string") return `<p class="lec-more${i === 0 ? " lec-drop" : ""}">${esc(b)}</p>`;
       return `<article class="lec-block">
         <h4>${esc(b.h)}</h4>
         <p class="${i === 0 ? "lec-drop" : ""}">${esc(b.p)}</p>
