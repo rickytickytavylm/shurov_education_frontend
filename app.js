@@ -103,7 +103,7 @@ function defaultKira() {
       id: "k0",
       name: "Кира AI",
       me: false,
-      text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модуль 1. Если опасно: 112 и очная помощь.",
+      text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модули 1–2. Если опасно: 112 и очная помощь.",
     },
   ];
 }
@@ -328,7 +328,7 @@ function blockLessons(e) {
 }
 
 function moduleComingSoon(mod) {
-  return Boolean(mod && (mod.comingSoon || (mod.n >= 2 && !mod.free)));
+  return Boolean(mod && (mod.comingSoon || (mod.n >= 3 && !mod.free)));
 }
 
 function canOpenModule(mod) {
@@ -348,7 +348,7 @@ function lockReason(id) {
 }
 
 function continueLessonId() {
-  const open = cabinetModules().filter((m) => canOpenModule(m) && m.id === "m1");
+  const open = cabinetModules().filter((m) => canOpenModule(m) && (m.id === "m1" || m.id === "m2"));
   const pool = open.length ? open : cabinetModules().filter((m) => canOpenModule(m));
   for (const m of pool) {
     for (const l of lessonsOf(m)) {
@@ -1217,9 +1217,9 @@ function nextCta(module, lesson) {
 function comingSoonActions(mod) {
   const title = (mod && mod.title) || "следующий модуль";
   return `<div class="wait-actions">
-    <p class="wait-note">«${esc(title)}» скоро откроется. Сейчас можно остаться в первом модуле или разобрать тему с Кирой.</p>
+    <p class="wait-note">«${esc(title)}» скоро откроется. Сейчас можно остаться в модулях 1–2 или разобрать тему с Кирой.</p>
     <a class="btn" href="#/kira">поговорить с Кирой</a>
-    <a class="btn ghost" href="#/lesson/m1-l1">вернуться к модулю 1</a>
+    <a class="btn ghost" href="#/lesson/m2-l1">вернуться к модулю 2</a>
   </div>`;
 }
 
@@ -1246,9 +1246,9 @@ function lockedHtml(reason, module, lesson) {
     action = `<a class="btn" href="#/guide">открыть «Как всё устроено»</a>`;
   } else if (reason === "coming-soon") {
     title = "Скоро откроется";
-    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и первый модуль: видео, конспект и практика. Пока ждёте, можно разобрать тему с Кирой.`;
+    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и модули 1–2: видео, конспект и практика с Кирой. Пока ждёте, можно разобрать тему в чате.`;
     action = `<a class="btn" href="#/kira">поговорить с Кирой</a>
-      <a class="btn ghost" href="#/lesson/m1-l1">открыть модуль 1</a>`;
+      <a class="btn ghost" href="#/lesson/m2-l1">открыть модуль 2</a>`;
   } else if (reason === "need-prev-lesson") {
     title = "Соблюдайте последовательность";
     const list = lessonsOf(module);
@@ -1785,7 +1785,7 @@ function kiraHtml() {
     <div class="kira-page">
     <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
     <h2>Кира AI</h2>
-    <p class="lede">Куратор кабинета: знает Старт, модуль 1, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда.</p>
+    <p class="lede">Куратор кабинета: знает Старт, модули 1–2, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда.</p>
     <div class="kira-pills">
       <button type="button" data-q="Что в этом курсе называется созависимостью?">Созависимость</button>
       <button type="button" data-q="Где граница между заботой и спасательством?">Спасательство</button>
@@ -2738,8 +2738,8 @@ function kiraContext() {
     name: (user && user.name) || "",
     moduleTitle: module && module.title,
     lessonTitle: lesson && lesson.title,
-    openNow: "Старт и модуль 1",
-    comingSoon: "модули 2, 3, 4 и итоговый тест — скоро",
+    openNow: "Старт и модули 1–2",
+    comingSoon: "модули 3, 4 и итоговый тест — скоро",
     situation: intro.now || "",
     request: intro.in4weeks || "",
     homework: (homework[currentId] && homework[currentId].text) || "",
@@ -2859,9 +2859,9 @@ function localKiraReply(text) {
     return "Границу чаще ломает не чужое давление, а вина. Первый навык: выдержать паузу после правды и не бросаться чинить чувство другого.";
   }
   if (/расписан|фокус|встреч|zoom|зум|куратор|чат поток|когда групп/i.test(q)) {
-    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с экспертами школы проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+3rUQZDsJsQA4Njcy. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модуль 1.";
+    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с экспертами школы проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+3rUQZDsJsQA4Njcy. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модули 1–2.";
   }
-  return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модуль 1, следующие модули скоро.";
+  return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модули 1–2, следующие модули скоро.";
 }
 
 function bindTools() {
@@ -3096,7 +3096,7 @@ async function reviewHomework(lessonId, text) {
       blame
         ? "Слышу самообвинение. В этом курсе вина не доказательство истины, а часть схемы. Отделите поступок от приговора себе."
         : "Вы держите исследовательскую позицию: факт без суда над собой.",
-      "Напишите Кире в чат, если хотите разобрать эту сцену глубже — она знает модуль 1 и 14 схем.",
+      "Напишите Кире в чат, если хотите разобрать эту сцену глубже — она знает модули 1–2 и 14 схем.",
     ],
   };
 }
