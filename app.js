@@ -2343,14 +2343,14 @@ async function startHomeworkStream(lesson, text) {
     const streamed = await streamEduChat([{ role: "user", text: q }], (full) => {
       acc = full;
       setLessonKiraLive(replyId, { text: full });
-    });
+    }, { thread: "lesson", lessonId: lesson.id, persist: "homework", homeworkText: text });
     const finalText = String(streamed || acc || localKiraReply(text)).trim();
     homework[lesson.id] = { text, review: { summary: finalText, points: [] } };
     save(LS.hw, homework);
     const thread = (lessonChat[lesson.id] || lessonKiraThread(lesson)).filter((m) => m.id !== replyId);
     thread.push({ id: replyId, name: "Кира AI", me: false, text: finalText });
     lessonChat[lesson.id] = thread;
-    save(LS.lessonChat, lessonChat);
+    persistKira();
     setLessonKiraLive(replyId, { text: finalText, next: true, lesson });
     progress[lesson.id] = true;
     save(LS.progress, progress);
@@ -2364,7 +2364,7 @@ async function askLessonKira(lesson, text) {
   const log = document.getElementById("lessonKiraLog");
   const mine = { id: "lk" + Date.now(), name: (user && user.name) || "Вы", me: true, text };
   lessonChat[lesson.id] = (lessonChat[lesson.id] || []).concat(mine);
-  save(LS.lessonChat, lessonChat);
+  persistKira();
   if (log) log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
   const replyId = "lk" + Date.now() + "a";
   if (log) {
@@ -2381,7 +2381,7 @@ async function askLessonKira(lesson, text) {
   const streamed = await streamEduChat(history, (full) => {
     acc = full;
     setLessonKiraLive(replyId, { text: full });
-  });
+  }, { thread: "lesson", lessonId: lesson.id });
   const finalText = String(streamed || acc || localKiraReply(text)).trim();
   lessonChat[lesson.id] = (lessonChat[lesson.id] || []).concat({
     id: replyId,
@@ -2389,7 +2389,7 @@ async function askLessonKira(lesson, text) {
     me: false,
     text: finalText,
   });
-  save(LS.lessonChat, lessonChat);
+  persistKira();
   setLessonKiraLive(replyId, { text: finalText, next: true, lesson });
 }
 
@@ -2702,7 +2702,7 @@ async function askKira(text) {
     const q = String(text || "").trim() || "Демо-вопрос";
     const mine = { id: "k" + Date.now(), name: (user && user.name) || "Вы", me: true, text: q };
     kira.push(mine);
-    save(LS.kira, kira.filter((m) => m.id !== "think"));
+    persistKira();
     const log = document.getElementById("kiraLog");
     if (log) {
       log.insertAdjacentHTML("beforeend", kiraMsgHtml(mine));
@@ -2719,7 +2719,7 @@ async function askKira(text) {
     const finalText = String(streamed || acc || localKiraReply(q)).trim();
     kira = kira.filter((m) => m.id !== "think" && m.id !== replyId);
     kira.push({ id: replyId, name: "Кира AI", me: false, text: finalText });
-    save(LS.kira, kira);
+    persistKira();
     setKiraLive(replyId, { text: finalText });
   } finally {
     kiraBusy = false;
@@ -2743,6 +2743,7 @@ function kiraContext() {
     situation: intro.now || "",
     request: intro.in4weeks || "",
     homework: (homework[currentId] && homework[currentId].text) || "",
+    thread: "main",
   };
 }
 
@@ -2765,7 +2766,7 @@ async function liveKiraReply(text) {
   return localKiraReply(text);
 }
 
-async function streamEduChat(history, onDelta) {
+async function streamEduChat(history, onDelta, extraCtx) {
   if (!hasBackend()) return null;
   const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), 75000) : null;
@@ -2782,7 +2783,7 @@ async function streamEduChat(history, onDelta) {
         deviceId: deviceId(),
         stream: true,
         messages: history,
-        context: kiraContext(),
+        context: { ...kiraContext(), ...(extraCtx || {}) },
       }),
       signal: ctrl ? ctrl.signal : undefined,
       credentials: "omit",
@@ -2962,7 +2963,25 @@ function profilePayload() {
       name: user && user.name,
       at: Date.now(),
     },
+    kira: kiraPack(),
   };
+}
+
+function kiraPack() {
+  return {
+    main: (kira || []).filter((m) => m && !m.think && m.text),
+    lessons: lessonChat || {},
+  };
+}
+
+function userTurns(msgs) {
+  return (Array.isArray(msgs) ? msgs : []).filter((m) => m && m.me && String(m.text || "").trim()).length;
+}
+
+function persistKira() {
+  save(LS.kira, (kira || []).filter((m) => m && m.id !== "think"));
+  save(LS.lessonChat, lessonChat || {});
+  syncProfile();
 }
 
 async function requestJson(path, body, ms) {
@@ -3064,12 +3083,28 @@ function applyProfile(p) {
     apply = { ...apply, ...p.apply };
     save(LS.apply, apply);
   }
+  const pack = p.kira && typeof p.kira === "object" ? p.kira : ((p.extra && p.extra.kira) || {});
+  const serverMain = Array.isArray(pack.main) ? pack.main : [];
+  if (userTurns(serverMain) >= userTurns(kira) && serverMain.length) {
+    kira = serverMain.filter((m) => m && m.text && !m.think);
+    if (!kira.length) kira = defaultKira();
+    save(LS.kira, kira);
+  }
+  const serverLessons = pack.lessons && typeof pack.lessons === "object" ? pack.lessons : {};
+  const nextLessons = { ...lessonChat };
+  Object.entries(serverLessons).forEach(([id, thread]) => {
+    if (userTurns(thread) >= userTurns(nextLessons[id])) nextLessons[id] = thread;
+  });
+  lessonChat = nextLessons;
+  save(LS.lessonChat, lessonChat);
 }
 
 async function hydrateProfile() {
   if (!hasBackend() || !accessKey()) return;
   const data = await getJson("/edu/api/profile?key=" + encodeURIComponent(accessKey()));
   if (data && data.profile) applyProfile(data.profile);
+  persistKira();
+  if (view === "kira" || view === "lesson") render();
 }
 
 async function reviewHomework(lessonId, text) {
@@ -3272,6 +3307,12 @@ if (course && $app) {
   warmFilmBg();
   route();
   if (hasAccess()) hydrateProfile();
+  window.addEventListener("pagehide", () => {
+    if (hasAccess() && hasBackend()) persistKira();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && hasAccess() && hasBackend()) persistKira();
+  });
 } else if ($app) {
   $app.innerHTML = `<div class="flow"><div class="flow-main"><p class="eye">Кабинет</p><h1>Файлы курса не загрузились</h1><p class="lead">Обновите страницу с главной ссылки сайта. Демо работает без сервера, в браузере.</p></div></div>`;
   bindCookie();
