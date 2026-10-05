@@ -328,7 +328,7 @@ function blockLessons(e) {
 }
 
 function moduleComingSoon(mod) {
-  return Boolean(mod && (mod.comingSoon || (mod.n >= 3 && !mod.free)));
+  return Boolean(mod && mod.comingSoon);
 }
 
 function canOpenModule(mod) {
@@ -348,7 +348,7 @@ function lockReason(id) {
 }
 
 function continueLessonId() {
-  const open = cabinetModules().filter((m) => canOpenModule(m) && (m.id === "m1" || m.id === "m2"));
+  const open = cabinetModules().filter((m) => canOpenModule(m));
   const pool = open.length ? open : cabinetModules().filter((m) => canOpenModule(m));
   for (const m of pool) {
     for (const l of lessonsOf(m)) {
