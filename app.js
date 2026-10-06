@@ -434,6 +434,7 @@ function legalFooterHtml() {
           <div class="legal-bottom">
             <p>© 2026 Школа доктора Шурова</p>
             <p>Сайт принадлежит индивидуальному предпринимателю Щербаковой Нине Николаевне</p>
+            <p><a href="https://melniapps.com" target="_blank" rel="noopener noreferrer">Разработчик: MelniApps LLC.</a></p>
           </div>
         </div>
       </footer>`;
