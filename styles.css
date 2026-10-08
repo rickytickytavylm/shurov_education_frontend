@@ -2245,6 +2245,18 @@ html, body { background: var(--snow); color: var(--ink); }
   }
   body.is-kira.kb-open .cookie-bar { display: none !important; }
   body.is-kira.kb-open .app-dock { display: none !important; }
+  body.is-kira.kb-open .chat-in {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: var(--kb, 0px);
+    top: auto;
+    z-index: 80;
+    width: auto;
+    padding: 8px 0 10px;
+    background: #f7f4ee;
+  }
+  body.is-kira.kb-open .chat-log { padding-bottom: 84px; }
   body.has-cookie.is-kira .chat-in { bottom: auto; }
   body.has-cookie .main { padding-bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
   body.has-cookie.is-kira .main { padding-bottom: 8px; }
