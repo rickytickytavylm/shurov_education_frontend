@@ -2065,10 +2065,11 @@ function wakeEduApi() {
 
 async function loginRequest(key) {
   const body = { key, deviceId: deviceId() };
-  let result = await requestJson("/edu/api/login", body, 25000);
-  if (!result.ok && result.status !== 403 && result.status !== 429) {
-    await waitMs(400);
-    result = await requestJson("/edu/api/login", body, 25000);
+  let result = null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) await waitMs(500);
+    result = await requestJson("/edu/api/login", body, 9000);
+    if (result.ok || result.status === 403 || result.status === 429) break;
   }
   return result;
 }
@@ -2769,7 +2770,26 @@ async function liveKiraReply(text, extraCtx) {
 
 async function streamEduChat(history, onDelta, extraCtx) {
   if (!hasBackend()) return null;
+  const payload = JSON.stringify({
+    key: accessKey(),
+    accessKey: accessKey(),
+    deviceId: deviceId(),
+    stream: true,
+    messages: history,
+    context: { ...kiraContext(), ...(extraCtx || {}) },
+  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt) await waitMs(500);
+    const out = await streamEduChatOnce(payload, onDelta);
+    if (!out.retry) return out.text;
+  }
+  return null;
+}
+
+async function streamEduChatOnce(payload, onDelta) {
   const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+  let answered = false;
+  const connect = ctrl ? setTimeout(() => { if (!answered) ctrl.abort(); }, 10000) : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), 75000) : null;
   try {
     const res = await fetch(api + "/edu/api/chat", {
@@ -2778,19 +2798,13 @@ async function streamEduChat(history, onDelta, extraCtx) {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
       },
-      body: JSON.stringify({
-        key: accessKey(),
-        accessKey: accessKey(),
-        deviceId: deviceId(),
-        stream: true,
-        messages: history,
-        context: { ...kiraContext(), ...(extraCtx || {}) },
-      }),
+      body: payload,
       signal: ctrl ? ctrl.signal : undefined,
       credentials: "omit",
       cache: "no-store",
     });
-    if (!res.ok || !res.body) return null;
+    answered = true;
+    if (!res.ok || !res.body) return { text: null };
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = "";
@@ -2819,14 +2833,15 @@ async function streamEduChat(history, onDelta, extraCtx) {
           full = data.reply;
           if (typeof onDelta === "function") onDelta(full);
         } else if (ev === "error") {
-          return full || null;
+          return { text: full || null };
         }
       }
     }
-    return full || null;
+    return { text: full || null };
   } catch {
-    return null;
+    return { text: null, retry: !answered };
   } finally {
+    if (connect) clearTimeout(connect);
     if (timer) clearTimeout(timer);
   }
 }
