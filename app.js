@@ -2344,7 +2344,7 @@ async function startHomeworkStream(lesson, text) {
     const streamed = await streamEduChat([{ role: "user", text: q }], (full) => {
       acc = full;
       setLessonKiraLive(replyId, { text: full });
-    }, { thread: "lesson", lessonId: lesson.id, persist: "homework", homeworkText: text });
+    }, { thread: "lesson", lessonId: lesson.id, persist: "homework", homeworkText: text, userMsgId: "a-" + lesson.id, replyId });
     const finalText = String(streamed || acc || localKiraReply(text)).trim();
     homework[lesson.id] = { text, review: { summary: finalText, points: [] } };
     save(LS.hw, homework);
@@ -2382,7 +2382,7 @@ async function askLessonKira(lesson, text) {
   const streamed = await streamEduChat(history, (full) => {
     acc = full;
     setLessonKiraLive(replyId, { text: full });
-  }, { thread: "lesson", lessonId: lesson.id });
+  }, { thread: "lesson", lessonId: lesson.id, userMsgId: mine.id, replyId });
   const finalText = String(streamed || acc || localKiraReply(text)).trim();
   lessonChat[lesson.id] = (lessonChat[lesson.id] || []).concat({
     id: replyId,
@@ -2716,7 +2716,7 @@ async function askKira(text) {
     const streamed = await streamKiraReply(q, (full) => {
       acc = full;
       setKiraLive(replyId, { text: full });
-    });
+    }, { userMsgId: mine.id, replyId });
     const finalText = String(streamed || acc || localKiraReply(q)).trim();
     kira = kira.filter((m) => m.id !== "think" && m.id !== replyId);
     kira.push({ id: replyId, name: "Кира AI", me: false, text: finalText });
@@ -2755,13 +2755,13 @@ function kiraHistory() {
     .map((m) => ({ role: m.me ? "user" : "assistant", text: m.text }));
 }
 
-async function liveKiraReply(text) {
+async function liveKiraReply(text, extraCtx) {
   const data = await post("/edu/api/chat", {
     key: accessKey(),
     accessKey: accessKey(),
     deviceId: deviceId(),
     messages: kiraHistory(),
-    context: kiraContext(),
+    context: { ...kiraContext(), ...(extraCtx || {}) },
   });
   if (data && data.reply) return data.reply;
   return localKiraReply(text);
@@ -2831,16 +2831,16 @@ async function streamEduChat(history, onDelta, extraCtx) {
   }
 }
 
-async function streamKiraReply(text, onDelta) {
+async function streamKiraReply(text, onDelta, extraCtx) {
   if (!hasBackend()) return localKiraReply(text);
   const history = kiraHistory();
   const last = history[history.length - 1];
   if (!last || last.role !== "user" || last.text !== text) {
     history.push({ role: "user", text });
   }
-  const streamed = await streamEduChat(history, onDelta);
+  const streamed = await streamEduChat(history, onDelta, extraCtx);
   if (streamed) return streamed;
-  return liveKiraReply(text);
+  return liveKiraReply(text, extraCtx);
 }
 
 function localKiraReply(text) {
@@ -2848,22 +2848,7 @@ function localKiraReply(text) {
   if (/суицид|убить себя|не хочу жить|насили|избивает/i.test(q)) {
     return "Если есть угроза жизни или насилие — 112 и очная помощь. Курс здесь не вместо безопасности.";
   }
-  if (/созавис|слиян|раствор/i.test(q)) {
-    return "В этом курсе созависимость — не «слишком сильная любовь», а привычка регулировать себя через состояние другого. Тема модуля 1 и схемы «Слияние, контакт, обрыв».";
-  }
-  if (/карпман|треугольник/i.test(q)) {
-    return "Треугольник Карпмана — три роли вместо разговора: спасатель, жертва, преследователь. Выход — взрослый контакт: прямо сказать, не спасать без просьбы, не наказывать. Это схема 01 в разделе «14 схем».";
-  }
-  if (/спасательств|enable|выпил|алкогол/i.test(q)) {
-    return "Спасательство снимает вашу тревогу, но забирает у другого последствия его выбора. Три вопроса: он просил? он может сам? что останется ему после моей помощи?";
-  }
-  if (/винова|разочаров|сказать нет|границ/i.test(q)) {
-    return "Границу чаще ломает не чужое давление, а вина. Первый навык: выдержать паузу после правды и не бросаться чинить чувство другого.";
-  }
-  if (/расписан|фокус|встреч|zoom|зум|куратор|чат поток|когда групп/i.test(q)) {
-    return "Курс на 4 недели: каждую неделю лекция и практика. Четыре фокус-группы с экспертами школы проходят без записи, Zoom не используем. Две индивидуальные консультации. Чат потока: t.me/+3rUQZDsJsQA4Njcy. Куратор — Анна Букреева, @Anya_Bukreeva, +7 999 001-59-21. Сейчас в кабинете открыты Старт и модули 1–2.";
-  }
-  return "Опишите одну сцену: время, место, что сказали или сделали. От этого можно отделить факт от вины. Сейчас открыты Старт и модули 1–2, следующие модули скоро.";
+  return "Кира сейчас не смогла ответить: телефон не достучался до сервера. Проверьте интернет и отправьте сообщение ещё раз.";
 }
 
 function bindTools() {
@@ -2979,6 +2964,24 @@ function userTurns(msgs) {
   return (Array.isArray(msgs) ? msgs : []).filter((m) => m && m.me && String(m.text || "").trim()).length;
 }
 
+function dropEchoes(list) {
+  const arr = (Array.isArray(list) ? list : []).filter(Boolean);
+  const key = (m) => (m.me ? "u|" : "k|") + String(m.text || "").trim();
+  const long = (m) => Boolean(m) && String(m.text || "").trim().length >= 40;
+  const seen = new Set();
+  const pairs = new Set();
+  return arr.filter((m, i) => {
+    const k = key(m);
+    const next = arr[i + 1];
+    const pair = k + "\n" + (next ? key(next) : "");
+    const echo = long(m) ? seen.has(k) : long(next) && pairs.has(pair);
+    pairs.add(pair);
+    if (echo) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
 function persistKira() {
   save(LS.kira, (kira || []).filter((m) => m && m.id !== "think"));
   save(LS.lessonChat, lessonChat || {});
@@ -3085,16 +3088,21 @@ function applyProfile(p) {
     save(LS.apply, apply);
   }
   const pack = p.kira && typeof p.kira === "object" ? p.kira : ((p.extra && p.extra.kira) || {});
-  const serverMain = Array.isArray(pack.main) ? pack.main : [];
+  const serverMain = dropEchoes(pack.main);
+  if (Array.isArray(kira)) kira = dropEchoes(kira);
   if (userTurns(serverMain) >= userTurns(kira) && serverMain.length) {
     kira = serverMain.filter((m) => m && m.text && !m.think);
     if (!kira.length) kira = defaultKira();
-    save(LS.kira, kira);
   }
+  save(LS.kira, (kira || []).filter((m) => m && m.id !== "think"));
   const serverLessons = pack.lessons && typeof pack.lessons === "object" ? pack.lessons : {};
-  const nextLessons = { ...lessonChat };
+  const nextLessons = {};
+  Object.entries(lessonChat || {}).forEach(([id, thread]) => {
+    nextLessons[id] = dropEchoes(thread);
+  });
   Object.entries(serverLessons).forEach(([id, thread]) => {
-    if (userTurns(thread) >= userTurns(nextLessons[id])) nextLessons[id] = thread;
+    const clean = dropEchoes(thread);
+    if (userTurns(clean) >= userTurns(nextLessons[id])) nextLessons[id] = clean;
   });
   lessonChat = nextLessons;
   save(LS.lessonChat, lessonChat);
