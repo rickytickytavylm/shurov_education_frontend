@@ -593,38 +593,11 @@ function pinAppShell() {
     );
     if (!typing) window.SE_APP_BASE_H = Math.max(layout, visual);
     const base = window.SE_APP_BASE_H || Math.max(layout, visual);
-    let kb = Math.max(0, layout - offsetTop - visual);
-    if (typing && kb < 80 && base - visual > 80) kb = base - visual;
-    const keyboard = typing && kb > 80;
+    const inset = Math.max(0, Math.round(layout - visual - offsetTop));
+    const keyboard = typing && (base - visual > 80 || inset > 80);
     document.body.classList.toggle("kb-open", keyboard);
     document.documentElement.style.setProperty("--app-h", visual + "px");
     document.documentElement.style.setProperty("--vv-top", offsetTop + "px");
-    document.documentElement.style.setProperty("--kb", (keyboard ? kb : 0) + "px");
-    if (keyboard && (window.scrollY || document.documentElement.scrollTop)) {
-      window.scrollTo(0, 0);
-    }
-    const composer = document.querySelector("body.is-kira .chat-in");
-    if (composer) {
-      if (keyboard) {
-        composer.style.position = "fixed";
-        composer.style.left = "12px";
-        composer.style.right = "12px";
-        composer.style.bottom = kb + "px";
-        composer.style.top = "auto";
-        composer.style.zIndex = "80";
-        composer.style.width = "auto";
-        const log = document.getElementById("kiraLog") || document.getElementById("lessonKiraLog");
-        if (log) log.scrollTop = log.scrollHeight;
-      } else if (composer.style.position === "fixed") {
-        composer.style.position = "";
-        composer.style.left = "";
-        composer.style.right = "";
-        composer.style.bottom = "";
-        composer.style.top = "";
-        composer.style.zIndex = "";
-        composer.style.width = "";
-      }
-    }
     const theme = document.querySelector('meta[name="theme-color"]');
     if (theme) theme.setAttribute("content", "#ffffff");
   };
@@ -640,10 +613,7 @@ function pinAppShell() {
     window.visualViewport.addEventListener("resize", pinAppShell, { passive: true });
     window.visualViewport.addEventListener("scroll", pinAppShell, { passive: true });
   }
-  document.addEventListener("focusin", () => {
-    apply();
-    [80, 200, 420, 700].forEach((ms) => setTimeout(apply, ms));
-  }, true);
+  document.addEventListener("focusin", apply, true);
   document.addEventListener("focusout", () => setTimeout(apply, 80), true);
 }
 
