@@ -15,7 +15,10 @@ const LS = {
   device: "se_device",
 };
 
-const api = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
+const API_PREF = "se_api";
+const apiMain = (window.EDU_CONFIG && window.EDU_CONFIG.BACKEND_URL) || "";
+const apiBackup = (window.EDU_CONFIG && window.EDU_CONFIG.BACKUP_URL) || "";
+let api = pickApi();
 const START_VIDEO = "https://storage.yandexcloud.net/fidesetratio/podvodka.mp4";
 const CF_VIDEO_KEY = "SE-MBPB-CEMK";
 const CF_BASE = "https://pub-4c7dc8be931e442885afd7530c1cb916.r2.dev";
@@ -2791,8 +2794,9 @@ async function streamEduChatOnce(payload, onDelta) {
   let answered = false;
   const connect = ctrl ? setTimeout(() => { if (!answered) ctrl.abort(); }, 10000) : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), 75000) : null;
+  const base = api;
   try {
-    const res = await fetch(api + "/edu/api/chat", {
+    const res = await fetch(base + "/edu/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -2839,6 +2843,7 @@ async function streamEduChatOnce(payload, onDelta) {
     }
     return { text: full || null };
   } catch {
+    if (!answered) apiFailed(base);
     return { text: null, retry: !answered };
   } finally {
     if (connect) clearTimeout(connect);
@@ -2937,6 +2942,23 @@ function hasBackend() {
   return Boolean(api);
 }
 
+function pickApi() {
+  const want = new URLSearchParams(location.search).get("api");
+  try {
+    if (want === "backup" || want === "main") localStorage.setItem(API_PREF, want);
+    if (apiBackup && localStorage.getItem(API_PREF) === "backup") return apiBackup;
+  } catch (_) {}
+  return apiMain;
+}
+
+function apiFailed(base) {
+  if (!apiBackup || base !== api) return;
+  api = base === apiMain ? apiBackup : apiMain;
+  try {
+    localStorage.setItem(API_PREF, api === apiBackup ? "backup" : "main");
+  } catch (_) {}
+}
+
 function accessKey() {
   try {
     return (user && user.key) || localStorage.getItem(LS.key) || "";
@@ -3008,8 +3030,9 @@ async function requestJson(path, body, ms) {
   const wait = Number(ms) > 0 ? Number(ms) : /chat|homework-review/.test(path) ? 75000 : 15000;
   const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
   const timer = ctrl ? setTimeout(() => ctrl.abort(), wait) : null;
+  const base = api;
   try {
-    const res = await fetch(api + path, {
+    const res = await fetch(base + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {}),
@@ -3021,6 +3044,7 @@ async function requestJson(path, body, ms) {
     const data = ct.includes("application/json") ? await res.json().catch(() => null) : null;
     return { ok: res.ok, status: res.status, data, error: (data && data.error) || "" };
   } catch (err) {
+    apiFailed(base);
     return { ok: false, status: 0, data: null, error: err && err.name === "AbortError" ? "timeout" : "network" };
   } finally {
     if (timer) clearTimeout(timer);
@@ -3035,12 +3059,14 @@ async function post(path, body, ms) {
 
 async function getJson(path) {
   if (!hasBackend()) return null;
+  const base = api;
   try {
-    const res = await fetch(api + path);
+    const res = await fetch(base + path);
     if (!res.ok) return null;
     const ct = res.headers.get("content-type") || "";
     return ct.includes("application/json") ? res.json() : null;
   } catch {
+    apiFailed(base);
     return null;
   }
 }

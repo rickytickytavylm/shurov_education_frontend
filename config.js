@@ -21,11 +21,10 @@
     }
     el.href = base;
   }
+  const local = location.hostname === "localhost" || location.hostname === "127.0.0.1";
   window.EDU_CONFIG = {
-    BACKEND_URL:
-      location.hostname === "localhost" || location.hostname === "127.0.0.1"
-        ? "http://localhost:8788"
-        : "https://api.kira-ai.online",
+    BACKEND_URL: local ? "http://localhost:8788" : "https://api.kira-ai.online",
+    BACKUP_URL: local ? "" : "https://api.doctorshurov.ru",
   };
   window.asset = function (path) {
     if (!path) return "";
