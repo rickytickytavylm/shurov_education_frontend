@@ -71,6 +71,7 @@ const DOCK_ICONS = {
   book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.4 5.2h6.2A2.4 2.4 0 0 1 14 7.6v11.6H7.8A2.4 2.4 0 0 1 5.4 16.8V5.2z"/><path d="M14 7.6h4.6v11.6H14"/><path d="M5.4 16.8h8.6"/></svg>',
   kira: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.4l1.15 4.55L17.7 9.1l-4.55 1.15L12 14.8l-1.15-4.55L6.3 9.1l4.55-1.15z"/><path d="M18.2 14.4l.7 2.55 2.55.7-2.55.7-.7 2.55-.7-2.55-2.55-.7 2.55-.7z"/></svg>',
   grid: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.4" y="4.4" width="6.4" height="6.4" rx="1.3"/><rect x="13.2" y="4.4" width="6.4" height="6.4" rx="1.3"/><rect x="4.4" y="13.2" width="6.4" height="6.4" rx="1.3"/><rect x="13.2" y="13.2" width="6.4" height="6.4" rx="1.3"/></svg>',
+  film: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.6" y="5" width="16.8" height="14" rx="2"/><path d="M8 5v14M16 5v14M3.6 9.5h16.8M3.6 14.5h16.8"/></svg>',
 };
 
 function dockItem(href, on, icon, label, extra) {
@@ -532,7 +533,7 @@ function route() {
     }
   } else if (path === "tools") {
     view = hasAccess() ? (onboardingDone() ? "lesson" : "guide") : "login";
-  } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library") {
+  } else if (path === "kira" || path === "atlas" || path === "guide" || path === "library" || path === "records") {
     view = hasAccess() ? path : "login";
   } else if (path === "hello") {
     view = hasAccess() ? "hello" : "login";
@@ -741,6 +742,10 @@ function render(opts) {
   } else if (view === "library") {
     $app.innerHTML = shellHtml(libraryHtml());
     bindShell();
+  } else if (view === "records") {
+    $app.innerHTML = shellHtml(recordsHtml());
+    bindShell();
+    bindRecords();
   } else if (view === "kira") {
     $app.innerHTML = shellHtml(kiraHtml());
     bindShell();
@@ -1130,6 +1135,7 @@ function shellHtml(inner) {
           <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира AI</a>
           <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">14 схем</a>
           <a href="#/library" class="${view === "library" ? "on" : ""}">Литература</a>
+          <a href="#/records" class="${view === "records" ? "on" : ""}">Запись лекций</a>
         </nav>
         ${isStandalone() ? `<span class="pwa-badge light">приложение</span>` : `<button class="text-link light" type="button" data-pwa-open>на телефон</button>`}
         <button class="text-link light" type="button" id="logout">выйти</button>
@@ -1154,6 +1160,7 @@ function shellHtml(inner) {
             <a href="#/kira" class="${view === "kira" ? "on" : ""}">Кира AI</a>
             <a href="#/atlas" class="${view === "atlas" ? "on" : ""}">14 схем</a>
             <a href="#/library" class="${view === "library" ? "on" : ""}">Литература</a>
+            <a href="#/records" class="${view === "records" ? "on" : ""}">Запись лекций</a>
           </div>
           <div class="portrait">
             <img src="${esc(asset(doc.photo || "assets/shurov.webp"))}" alt="${esc(doc.name || "")}" />
@@ -1167,6 +1174,7 @@ function shellHtml(inner) {
         ${dockItem(onboardingDone() ? "#/lesson/" + esc(continueLessonId()) : "#/guide", view === "lesson", "book", "Уроки", 'data-gate="lessons"')}
         ${dockItem("#/kira", view === "kira", "kira", "Кира")}
         ${dockItem("#/atlas", view === "atlas", "grid", "Схемы")}
+        ${dockItem("#/records", view === "records", "film", "Запись лекций")}
       </nav>
     </div>`;
 }
@@ -1762,6 +1770,41 @@ function bindGuide() {
   }
   bindSurvey(findLesson(INTRO_SURVEY).lesson);
   protectLessonVideo();
+}
+
+const RECORDINGS = [
+  ["Терапевтическая группа первой недели", "https://storage.yandexcloud.net/fidesetratio/psy_1.mp4"],
+  ["Терапевтическая группа второй недели", "https://storage.yandexcloud.net/fidesetratio/psy_2.mp4"],
+  ["Терапевтическая группа третьей недели", "https://storage.yandexcloud.net/fidesetratio/psy_3.mp4"],
+];
+
+function recordsHtml() {
+  const groups = RECORDINGS.map(
+    ([title, src], i) => `<section class="section record-group">
+      <div class="section-label">Группа ${i + 1}</div>
+      <h3>${esc(title)}</h3>
+      <div class="video is-live">
+        <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture src="${esc(videoSrc(src))}"></video>
+      </div>
+    </section>`
+  ).join("");
+  return `
+    <p class="crumb">Материалы · группы</p>
+    <h2>Запись лекций</h2>
+    <p class="lede">Три терапевтические группы. Смотрите в своём темпе: видео можно ставить на паузу и возвращаться к ним.</p>
+    <div class="record-list">${groups}</div>`;
+}
+
+function bindRecords() {
+  protectLessonVideo();
+  const videos = [...document.querySelectorAll(".record-list video")];
+  videos.forEach((video) => {
+    video.addEventListener("play", () => {
+      videos.forEach((other) => {
+        if (other !== video && !other.paused) other.pause();
+      });
+    });
+  });
 }
 
 function libraryHtml() {
