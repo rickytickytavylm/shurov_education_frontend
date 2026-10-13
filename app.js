@@ -106,7 +106,7 @@ function defaultKira() {
       id: "k0",
       name: "Кира AI",
       me: false,
-      text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модули 1–2. Если опасно: 112 и очная помощь.",
+      text: "Здравствуйте. Я Кира — куратор кабинета. Знаю программу, расписание потока, команду сопровождения и чат. Разберу лекцию, практику или ваш эпизод. Сейчас открыты Старт и модули 1–4. Итоговый тест пока закрыт. Если опасно: 112 и очная помощь.",
     },
   ];
 }
@@ -1221,7 +1221,7 @@ function nextCta(module, lesson) {
 function comingSoonActions(mod) {
   const title = (mod && mod.title) || "следующий модуль";
   return `<div class="wait-actions">
-    <p class="wait-note">«${esc(title)}» скоро откроется. Сейчас можно остаться в модулях 1–2 или разобрать тему с Кирой.</p>
+    <p class="wait-note">«${esc(title)}» скоро откроется. Сейчас можно пройти модули 1–4 или разобрать тему с Кирой.</p>
     <a class="btn" href="#/kira">поговорить с Кирой</a>
     <a class="btn ghost" href="#/lesson/m2-l1">вернуться к модулю 2</a>
   </div>`;
@@ -1250,9 +1250,9 @@ function lockedHtml(reason, module, lesson) {
     action = `<a class="btn" href="#/guide">открыть «Как всё устроено»</a>`;
   } else if (reason === "coming-soon") {
     title = "Скоро откроется";
-    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и модули 1–2: видео, конспект и практика с Кирой. Пока ждёте, можно разобрать тему в чате.`;
+    text = `«${module.title}» уже в программе, но пока закрыт. Сейчас открыты Старт и модули 1–4: видео, конспект и практика с Кирой.`;
     action = `<a class="btn" href="#/kira">поговорить с Кирой</a>
-      <a class="btn ghost" href="#/lesson/m2-l1">открыть модуль 2</a>`;
+      <a class="btn ghost" href="#/lesson/m4-l1">открыть модуль 4</a>`;
   } else if (reason === "need-prev-lesson") {
     title = "Соблюдайте последовательность";
     const list = lessonsOf(module);
@@ -1512,13 +1512,21 @@ function surveyHtml(module, lesson) {
     </section>`;
 }
 
+function lectureParas(text, drop) {
+  return String(text || "")
+    .split(/\n\n+/)
+    .filter(Boolean)
+    .map((part, i) => `<p class="${drop && i === 0 ? "lec-drop" : "lec-more"}">${esc(part)}</p>`)
+    .join("");
+}
+
 function lectureBlocks(lecture) {
   return (lecture || [])
     .map((b, i) => {
       if (typeof b === "string") return `<p class="lec-more${i === 0 ? " lec-drop" : ""}">${esc(b)}</p>`;
       return `<article class="lec-block">
         <h4>${esc(b.h)}</h4>
-        <p class="${i === 0 ? "lec-drop" : ""}">${esc(b.p)}</p>
+        ${lectureParas(b.p, i === 0)}
       </article>`;
     })
     .join("");
@@ -1789,7 +1797,7 @@ function kiraHtml() {
     <div class="kira-page">
     <p class="crumb">Интеллектуальный ассистент · Кира AI</p>
     <h2>Кира AI</h2>
-    <p class="lede">Куратор кабинета: знает Старт, модули 1–2, 14 схем и задания. Разберёт лекцию, практику или ваш эпизод. Следующие модули скоро откроются — до них можно писать сюда.</p>
+    <p class="lede">Куратор кабинета: знает Старт, модули 1–4 и задания. Разберёт лекцию, практику или ваш эпизод. Итоговый тест откроется отдельно.</p>
     <div class="kira-pills">
       <button type="button" data-q="Что в этом курсе называется созависимостью?">Созависимость</button>
       <button type="button" data-q="Где граница между заботой и спасательством?">Спасательство</button>
@@ -2348,7 +2356,15 @@ async function startHomeworkStream(lesson, text) {
     const streamed = await streamEduChat([{ role: "user", text: q }], (full) => {
       acc = full;
       setLessonKiraLive(replyId, { text: full });
-    }, { thread: "lesson", lessonId: lesson.id, persist: "homework", homeworkText: text, userMsgId: "a-" + lesson.id, replyId });
+    }, {
+      thread: "lesson",
+      lessonId: lesson.id,
+      persist: "homework",
+      homeworkText: text,
+      homeworkTask: homeworkPrompt(lesson),
+      userMsgId: "a-" + lesson.id,
+      replyId,
+    });
     const finalText = String(streamed || acc || localKiraReply(text)).trim();
     homework[lesson.id] = { text, review: { summary: finalText, points: [] } };
     save(LS.hw, homework);
@@ -2743,8 +2759,8 @@ function kiraContext() {
     name: (user && user.name) || "",
     moduleTitle: module && module.title,
     lessonTitle: lesson && lesson.title,
-    openNow: "Старт и модули 1–2",
-    comingSoon: "модули 3, 4 и итоговый тест — скоро",
+    openNow: "Старт и модули 1–4",
+    comingSoon: "итоговый тест — скоро",
     situation: intro.now || "",
     request: intro.in4weeks || "",
     homework: (homework[currentId] && homework[currentId].text) || "",
@@ -3181,7 +3197,7 @@ async function reviewHomework(lessonId, text) {
       blame
         ? "Слышу самообвинение. В этом курсе вина не доказательство истины, а часть схемы. Отделите поступок от приговора себе."
         : "Вы держите исследовательскую позицию: факт без суда над собой.",
-      "Напишите Кире в чат, если хотите разобрать эту сцену глубже — она знает модули 1–2 и 14 схем.",
+      "Напишите Кире в чат, если хотите разобрать эту сцену глубже — она знает модули 1–4.",
     ],
   };
 }
