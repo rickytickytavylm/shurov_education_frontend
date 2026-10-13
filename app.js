@@ -1773,18 +1773,18 @@ function bindGuide() {
 }
 
 const RECORDINGS = [
-  ["Терапевтическая группа первой недели", "https://storage.yandexcloud.net/fidesetratio/psy_1.mp4"],
-  ["Терапевтическая группа второй недели", "https://storage.yandexcloud.net/fidesetratio/psy_2.mp4"],
-  ["Терапевтическая группа третьей недели", "https://storage.yandexcloud.net/fidesetratio/psy_3.mp4"],
+  ["Терапевтическая группа первой недели", "https://storage.yandexcloud.net/fidesetratio/psy_1.mp4", "assets/psy-1-poster.jpg"],
+  ["Терапевтическая группа второй недели", "https://storage.yandexcloud.net/fidesetratio/psy_2.mp4", "assets/psy-2-poster.jpg"],
+  ["Терапевтическая группа третьей недели", "https://storage.yandexcloud.net/fidesetratio/psy_3.mp4", "assets/psy-3-poster.jpg"],
 ];
 
 function recordsHtml() {
   const groups = RECORDINGS.map(
-    ([title, src], i) => `<section class="section record-group">
+    ([title, src, poster], i) => `<section class="section record-group">
       <div class="section-label">Группа ${i + 1}</div>
       <h3>${esc(title)}</h3>
       <div class="video is-live">
-        <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture src="${esc(videoSrc(src))}"></video>
+        <video controls playsinline webkit-playsinline preload="metadata" controlslist="nodownload noplaybackrate" disablepictureinpicture poster="${esc(asset(poster))}" src="${esc(videoSrc(src))}"></video>
       </div>
     </section>`
   ).join("");

@@ -1063,6 +1063,7 @@ window.COURSE = {
           title: "Близость без потери себя",
           duration: "модуль 4 · лекция",
           videoUrl: "https://storage.yandexcloud.net/fidesetratio/%D0%92%D0%B5%D0%B1%D0%B8%D0%BD%D0%B0%D1%80%20%D0%A1%D0%9E%D0%97%D0%90%D0%92%D0%98%D0%A1%D0%98%D0%9C%D0%9E%D0%A1%D0%A2%D0%AC%20%D1%874%20%D0%98%D0%A2%D0%9E%D0%93.mp4",
+          poster: "assets/m4-l1-poster.jpg",
           goals: [
             "Собрать новый рисунок: контакт плюс своя жизнь.",
             "Не ждать идеального партнёра как условия, чтобы вам можно было существовать.",
